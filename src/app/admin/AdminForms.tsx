@@ -15,6 +15,7 @@ export default function AdminForms({
   const [teamName, setTeamName] = useState("");
   const [captain, setCaptain] = useState("");
   const [color, setColor] = useState("");
+  const [teamLeague, setTeamLeague] = useState("recreational");
 
   const [homeTeamId, setHomeTeamId] = useState("");
   const [awayTeamId, setAwayTeamId] = useState("");
@@ -39,6 +40,7 @@ export default function AdminForms({
         name: teamName,
         captain,
         color,
+        league: teamLeague,
       }),
     });
 
@@ -53,6 +55,7 @@ export default function AdminForms({
     setTeamName("");
     setCaptain("");
     setColor("");
+    setTeamLeague("recreational");
   }
 
   async function addGame(e: React.FormEvent) {
@@ -143,6 +146,14 @@ export default function AdminForms({
             value={teamName}
             onChange={(e) => setTeamName(e.target.value)}
           />
+          <select
+            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            value = {teamLeague}
+            onChange={(e) => setTeamLeague(e.target.value)}
+            >
+              <option value="competitive">Competitive</option>
+              <option value="recreational">Recreational</option>
+            </select>
 
           <input
             className="rounded-lg bg-neutral-800 px-3 py-2 text-white"

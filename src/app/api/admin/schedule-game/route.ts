@@ -4,32 +4,27 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export async function POST(request: Request) {
   const body = await request.json();
 
-  const { password, name, captain, color, league } = body;
+  const { password, gameId, scheduledAt, location } = body;
 
   if (password !== process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!name) {
+  if (!gameId || !scheduledAt) {
     return NextResponse.json(
-      { error: "Team name is required" },
+      { error: "Game and date/time are required" },
       { status: 400 }
     );
   }
 
-  if (league !== "competitive" && league !== "recreational") {
-    return NextResponse.json(
-      { error: "League must be competitive or recreational" },
-      { status: 400 }
-    );
-  }
-
-  const { error } = await supabaseAdmin.from("teams").insert({
-    name,
-    captain,
-    color,
-    league,
-  });
+  const { error } = await supabaseAdmin
+    .from("games")
+    .update({
+      scheduled_at: scheduledAt,
+      location: location || null,
+      status: "scheduled",
+    })
+    .eq("id", gameId);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

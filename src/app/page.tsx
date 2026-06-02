@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import GameCard from "@/components/GameCard";
+import SectionTitle from "@/components/SectionTitle";
 
 export default async function HomePage() {
-  const { data: upcomingGames, error: upcomingError } = await supabase
+  const { data: upcomingGames } = await supabase
     .from("games")
     .select(`
       id,
@@ -11,6 +13,7 @@ export default async function HomePage() {
       status,
       home_score,
       away_score,
+      league,
       home_team:teams!games_home_team_id_fkey(name),
       away_team:teams!games_away_team_id_fkey(name)
     `)
@@ -18,7 +21,7 @@ export default async function HomePage() {
     .order("scheduled_at", { ascending: true })
     .limit(3);
 
-  const { data: latestScores, error: scoresError } = await supabase
+  const { data: latestScores } = await supabase
     .from("games")
     .select(`
       id,
@@ -27,6 +30,7 @@ export default async function HomePage() {
       status,
       home_score,
       away_score,
+      league,
       home_team:teams!games_home_team_id_fkey(name),
       away_team:teams!games_away_team_id_fkey(name)
     `)
@@ -34,98 +38,71 @@ export default async function HomePage() {
     .order("scheduled_at", { ascending: false })
     .limit(3);
 
-  if (upcomingError || scoresError) {
-    return (
-      <main className="min-h-screen bg-neutral-950 px-6 py-12 text-white">
-        <div className="mx-auto max-w-6xl">
-          <h1 className="text-4xl font-black">The Rhino League</h1>
-          <p className="mt-4 text-red-400">
-            Could not load Supabase data. Check your .env.local keys and RLS policies.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-neutral-950 text-white">
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="rounded-3xl bg-gradient-to-br from-orange-500 via-orange-700 to-neutral-950 p-10 shadow-2xl">
-          <p className="mb-3 text-sm uppercase tracking-[0.3em] text-orange-100">
-            Welcome to
-          </p>
+    <main className="min-h-screen text-white">
+      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl shadow-black/40 backdrop-blur md:p-12">
+          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-orange-500/25 blur-3xl" />
+          <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-yellow-500/10 blur-3xl" />
 
-          <h1 className="text-6xl font-black tracking-tight">
-            The Rhino League
-          </h1>
+          <div className="relative max-w-3xl">
+            <p className="mb-4 text-sm font-black uppercase tracking-[0.35em] text-orange-400">
+              Volleyball chaos starts here
+            </p>
 
-          <p className="mt-5 max-w-2xl text-lg text-orange-50">
-            Volleyball schedules, scores, standings, photos, polls, and league
-            drama, all in one place.
-          </p>
+            <h1 className="text-5xl font-black tracking-tight sm:text-7xl">
+              The Rhino League
+            </h1>
 
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Link
-              href="/schedule"
-              className="rounded-full bg-white px-5 py-3 font-bold text-neutral-950"
-            >
-              View Schedule
-            </Link>
+            <p className="mt-5 max-w-2xl text-lg text-neutral-300 sm:text-xl">
+              Schedules, scores, standings, polls, photos, and enough league
+              drama to make every match feel like a championship.
+            </p>
 
-            <Link
-              href="/standings"
-              className="rounded-full border border-white px-5 py-3 font-bold text-white"
-            >
-              Standings
-            </Link>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                href="/schedule"
+                className="rounded-full bg-orange-500 px-6 py-3 font-black text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600"
+              >
+                View Schedule
+              </Link>
+
+              <Link
+                href="/standings"
+                className="rounded-full border border-white/15 bg-white/[0.04] px-6 py-3 font-black text-white transition hover:bg-white/10"
+              >
+                League Table
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className="mt-12 grid gap-8 md:grid-cols-2">
+        <div className="mt-12 grid gap-10 lg:grid-cols-2">
           <section>
-            <h2 className="mb-4 text-2xl font-black">Upcoming Games</h2>
+            <SectionTitle>Upcoming Games</SectionTitle>
 
-            <div className="grid gap-4">
+            <div className="grid gap-5">
               {upcomingGames?.map((game: any) => (
-                <div
-                  key={game.id}
-                  className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
-                >
-                  <p className="text-lg font-bold">
-                    {game.home_team?.name} vs {game.away_team?.name}
-                  </p>
-
-                  <p className="mt-1 text-sm text-neutral-400">
-                    {new Date(game.scheduled_at).toLocaleString()} ·{" "}
-                    {game.location}
-                  </p>
-                </div>
+                <GameCard key={game.id} game={game} />
               ))}
+
+              {upcomingGames?.length === 0 && (
+                <p className="text-neutral-400">No upcoming games yet.</p>
+              )}
             </div>
           </section>
 
           <section>
-            <h2 className="mb-4 text-2xl font-black">Latest Scores</h2>
+            <SectionTitle>Latest Scores</SectionTitle>
 
-            <div className="grid gap-4">
+            <div className="grid gap-5">
               {latestScores?.map((game: any) => (
-                <div
-                  key={game.id}
-                  className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5"
-                >
-                  <p className="text-lg font-bold">
-                    {game.home_team?.name} vs {game.away_team?.name}
-                  </p>
-
-                  <p className="mt-1 text-3xl font-black text-orange-400">
-                    {game.home_score} - {game.away_score}
-                  </p>
-
-                  <p className="mt-1 text-sm text-neutral-400">
-                    {new Date(game.scheduled_at).toLocaleDateString()}
-                  </p>
-                </div>
+                <GameCard key={game.id} game={game} />
               ))}
+
+              {latestScores?.length === 0 && (
+                <p className="text-neutral-400">No completed games yet.</p>
+              )}
             </div>
           </section>
         </div>

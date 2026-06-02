@@ -1,60 +1,76 @@
 import { supabase } from "@/lib/supabase";
+import PageShell from "@/components/PageShell";
 
 export default async function TeamsPage() {
   const { data: teams, error } = await supabase
     .from("teams")
     .select("*")
+    .order("league", { ascending: true })
     .order("name", { ascending: true });
 
   if (error) {
     return (
-      <main className="min-h-screen bg-neutral-950 px-6 py-12 text-white">
-        <div className="mx-auto max-w-6xl">
-          <h1 className="text-4xl font-black">Teams</h1>
-          <p className="mt-4 text-red-400">{error.message}</p>
+      <PageShell title="Teams">
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-300">
+          {error.message}
         </div>
-      </main>
+      </PageShell>
+    );
+  }
+
+  const competitiveTeams =
+    teams?.filter((team: any) => team.league === "competitive") || [];
+
+  const recreationalTeams =
+    teams?.filter((team: any) => team.league === "recreational") || [];
+
+  function TeamGrid({ list }: { list: any[] }) {
+    return (
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {list.map((team: any) => (
+          <div
+            key={team.id}
+            className="rounded-3xl border border-white/10 bg-neutral-900/80 p-6 shadow-2xl shadow-black/30"
+          >
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-500 text-3xl shadow-lg shadow-orange-500/25">
+              🦏
+            </div>
+
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-orange-400">
+              {team.league} league
+            </p>
+
+            <h2 className="text-2xl font-black text-white">{team.name}</h2>
+
+            {team.captain && (
+              <p className="mt-2 text-neutral-400">Captain: {team.captain}</p>
+            )}
+
+            {team.color && (
+              <p className="mt-1 text-sm text-neutral-500">
+                Color: {team.color}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-12 text-white">
-      <div className="mx-auto max-w-6xl">
-        <h1 className="mb-8 text-4xl font-black">Teams</h1>
+    <PageShell
+      title="Teams"
+      subtitle="Competitive and recreational teams, all fighting for the same eventual playoff chaos."
+    >
+      <section className="mb-10">
+        <h2 className="mb-4 text-2xl font-black text-white">Competitive</h2>
+        <TeamGrid list={competitiveTeams} />
+      </section>
 
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {teams?.map((team: any) => (
-            <div
-              key={team.id}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6"
-            >
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500 text-3xl">
-                🦏
-              </div>
-
-              <h2 className="text-2xl font-black">{team.name}</h2>
-
-              {team.captain && (
-                <p className="mt-2 text-neutral-400">
-                  Captain: {team.captain}
-                </p>
-              )}
-
-              {team.color && (
-                <p className="mt-1 text-sm text-neutral-500">
-                  Color: {team.color}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {teams?.length === 0 && (
-          <p className="mt-6 text-neutral-400">
-            No teams have been added yet.
-          </p>
-        )}
-      </div>
-    </main>
+      <section>
+        <h2 className="mb-4 text-2xl font-black text-white">Recreational</h2>
+        <TeamGrid list={recreationalTeams} />
+      </section>
+    </PageShell>
   );
 }

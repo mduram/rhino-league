@@ -38,7 +38,12 @@ export default async function AdminPage() {
     <main className="min-h-screen bg-neutral-950 px-6 py-12 text-white">
       <div className="mx-auto max-w-3xl">
         <h1 className="mb-8 text-4xl font-black">Rhino League Admin</h1>
-
+        <a
+          href="/admin/scheduler"
+          className="mb-8 inline-block rounded-full bg-orange-500 px-5 py-3 font-black text-white transition hover:bg-orange-600"
+        >
+          Open Scheduler
+        </a>
         <AdminForms teams={teams || []} games={games || []} />
       </div>
     </main>
