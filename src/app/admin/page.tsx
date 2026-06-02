@@ -64,6 +64,13 @@ export default async function AdminPage() {
           </a>
 
           <a
+            href="/admin/auto-scheduler"
+            className="rounded-full bg-[#A51C30] px-5 py-3 font-black text-white transition hover:bg-[#7F1524]"
+          >
+            Smart Auto-Scheduler
+          </a>
+
+          <a
             href="/admin/scheduler"
             className="rounded-full bg-[#A51C30] px-5 py-3 font-black text-white transition hover:bg-[#7F1524]"
           >

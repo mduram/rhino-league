@@ -9,6 +9,13 @@ const REQUIRED_COLUMNS = {
   logo: "Upload a team logo (for the website)",
 };
 
+const OPTIONAL_COLUMNS = {
+  notAvailable: "Not available",
+  preferredGameTime: "Preferred game time",
+  preferredDayNotes:
+    "If you have a preferred day to play or prefer NOT to play indicate that here",
+};
+
 const MAX_LOGO_SIZE = 8 * 1024 * 1024;
 
 function getGoogleSheetCsvUrl(sheetUrl: string) {
@@ -362,6 +369,15 @@ export async function POST(request: Request) {
     const league = normalizeLeague(rowObject[REQUIRED_COLUMNS.league] || "");
     const rawLogoUrl = rowObject[REQUIRED_COLUMNS.logo]?.trim() || "";
 
+    const notAvailable =
+      rowObject[OPTIONAL_COLUMNS.notAvailable]?.trim() || null;
+
+    const preferredGameTime =
+      rowObject[OPTIONAL_COLUMNS.preferredGameTime]?.trim() || null;
+
+    const preferredDayNotes =
+      rowObject[OPTIONAL_COLUMNS.preferredDayNotes]?.trim() || null;
+
     if (!teamName) {
       skipped += 1;
       details.push({
@@ -408,6 +424,9 @@ export async function POST(request: Request) {
       name: teamName,
       captain,
       league,
+      not_available: notAvailable,
+      preferred_game_time: preferredGameTime,
+      preferred_day_notes: preferredDayNotes,
     };
 
     if (logoImport.logoUrl) {
@@ -451,6 +470,9 @@ export async function POST(request: Request) {
       color: null,
       logo_url: logoImport.logoUrl,
       logo_storage_path: logoImport.logoStoragePath,
+      not_available: notAvailable,
+      preferred_game_time: preferredGameTime,
+      preferred_day_notes: preferredDayNotes,
     };
 
     const { error: insertError } = await supabaseAdmin
