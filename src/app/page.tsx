@@ -1,112 +1,100 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import GameCard from "@/components/GameCard";
-import SectionTitle from "@/components/SectionTitle";
+import PageShell from "@/components/PageShell";
+import LeagueBadge from "@/components/LeagueBadge";
+import TeamLogo from "@/components/TeamLogo";
 
-export default async function HomePage() {
-  const { data: upcomingGames } = await supabase
-    .from("games")
-    .select(`
-      id,
-      scheduled_at,
-      location,
-      status,
-      home_score,
-      away_score,
-      league,
-      home_team:teams!games_home_team_id_fkey(name),
-      away_team:teams!games_away_team_id_fkey(name)
-    `)
-    .eq("status", "scheduled")
-    .order("scheduled_at", { ascending: true })
-    .limit(3);
+export default async function TeamsPage() {
+  const { data: teams, error } = await supabase
+    .from("teams")
+    .select("*")
+    .order("league", { ascending: true })
+    .order("name", { ascending: true });
 
-  const { data: latestScores } = await supabase
-    .from("games")
-    .select(`
-      id,
-      scheduled_at,
-      location,
-      status,
-      home_score,
-      away_score,
-      league,
-      home_team:teams!games_home_team_id_fkey(name),
-      away_team:teams!games_away_team_id_fkey(name)
-    `)
-    .eq("status", "completed")
-    .order("scheduled_at", { ascending: false })
-    .limit(3);
+  if (error) {
+    return (
+      <PageShell title="Teams">
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-300">
+          {error.message}
+        </div>
+      </PageShell>
+    );
+  }
+
+  const competitiveTeams =
+    teams?.filter((team: any) => team.league === "competitive") || [];
+
+  const recreationalTeams =
+    teams?.filter((team: any) => team.league === "recreational") || [];
+
+  function TeamGrid({ list }: { list: any[] }) {
+    return (
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {list.map((team: any) => {
+          const cardAccent =
+            team.league === "competitive"
+              ? "border-[#C4963E]/35 hover:border-[#C4963E]/70"
+              : "border-[#A51C30]/35 hover:border-[#A51C30]/70";
+
+          return (
+            <Link
+              href={`/teams/${team.id}`}
+              key={team.id}
+              className={`rounded-3xl border bg-[#230B12]/85 p-6 shadow-2xl shadow-black/30 transition hover:-translate-y-1 hover:bg-[#2B0D16] ${cardAccent}`}
+            >
+              <div className="mb-4">
+                <TeamLogo
+                  logoUrl={team.logo_url}
+                  teamName={team.name}
+                  league={team.league}
+                  size="md"
+                />
+              </div>
+
+              <LeagueBadge league={team.league} className="mb-3" />
+
+              <h2 className="text-2xl font-black text-white">{team.name}</h2>
+
+              {team.captain && (
+                <p className="mt-2 text-red-100/70">
+                  Captain: {team.captain}
+                </p>
+              )}
+
+              {team.color && (
+                <p className="mt-1 text-sm text-red-100/45">
+                  Color: {team.color}
+                </p>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen text-white">
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl shadow-black/40 backdrop-blur md:p-12">
-          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-orange-500/25 blur-3xl" />
-          <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-yellow-500/10 blur-3xl" />
-
-          <div className="relative max-w-3xl">
-            <p className="mb-4 text-sm font-black uppercase tracking-[0.35em] text-orange-400">
-              Volleyball chaos starts here
-            </p>
-
-            <h1 className="text-5xl font-black tracking-tight sm:text-7xl">
-              The Rhino League
-            </h1>
-
-            <p className="mt-5 max-w-2xl text-lg text-neutral-300 sm:text-xl">
-              Schedules, scores, standings, polls, photos, and enough league
-              drama to make every match feel like a championship.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link
-                href="/schedule"
-                className="rounded-full bg-orange-500 px-6 py-3 font-black text-white shadow-lg shadow-orange-500/25 transition hover:bg-orange-600"
-              >
-                View Schedule
-              </Link>
-
-              <Link
-                href="/standings"
-                className="rounded-full border border-white/15 bg-white/[0.04] px-6 py-3 font-black text-white transition hover:bg-white/10"
-              >
-                League Table
-              </Link>
-            </div>
-          </div>
+    <PageShell
+      title="Teams"
+      subtitle="Competitive and recreational teams, all fighting for the same eventual playoff chaos."
+    >
+      <section className="mb-10">
+        <div className="mb-4 flex items-center gap-3">
+          <h2 className="text-2xl font-black text-white">Competitive</h2>
+          <LeagueBadge league="competitive" />
         </div>
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-2">
-          <section>
-            <SectionTitle>Upcoming Games</SectionTitle>
-
-            <div className="grid gap-5">
-              {upcomingGames?.map((game: any) => (
-                <GameCard key={game.id} game={game} />
-              ))}
-
-              {upcomingGames?.length === 0 && (
-                <p className="text-neutral-400">No upcoming games yet.</p>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <SectionTitle>Latest Scores</SectionTitle>
-
-            <div className="grid gap-5">
-              {latestScores?.map((game: any) => (
-                <GameCard key={game.id} game={game} />
-              ))}
-
-              {latestScores?.length === 0 && (
-                <p className="text-neutral-400">No completed games yet.</p>
-              )}
-            </div>
-          </section>
-        </div>
+        <TeamGrid list={competitiveTeams} />
       </section>
-    </main>
+
+      <section>
+        <div className="mb-4 flex items-center gap-3">
+          <h2 className="text-2xl font-black text-white">Recreational</h2>
+          <LeagueBadge league="recreational" />
+        </div>
+
+        <TeamGrid list={recreationalTeams} />
+      </section>
+    </PageShell>
   );
 }

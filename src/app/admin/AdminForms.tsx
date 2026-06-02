@@ -16,6 +16,7 @@ export default function AdminForms({
   const [captain, setCaptain] = useState("");
   const [color, setColor] = useState("");
   const [teamLeague, setTeamLeague] = useState("recreational");
+  const [teamLogo, setTeamLogo] = useState<File | null>(null);
 
   const [homeTeamId, setHomeTeamId] = useState("");
   const [awayTeamId, setAwayTeamId] = useState("");
@@ -39,18 +40,20 @@ export default function AdminForms({
       return;
     }
 
+    const formData = new FormData();
+    formData.append("adminToken", adminToken);
+    formData.append("name", teamName);
+    formData.append("captain", captain);
+    formData.append("color", color);
+    formData.append("league", teamLeague);
+
+    if (teamLogo) {
+      formData.append("logo", teamLogo);
+    }
+
     const res = await fetch("/api/admin/add-team", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        adminToken,
-        name: teamName,
-        captain,
-        color,
-        league: teamLeague,
-      }),
+      body: formData,
     });
 
     const data = await res.json();
@@ -65,6 +68,15 @@ export default function AdminForms({
     setCaptain("");
     setColor("");
     setTeamLeague("recreational");
+    setTeamLogo(null);
+
+    const fileInput = document.getElementById(
+      "team-logo-input"
+    ) as HTMLInputElement | null;
+
+    if (fileInput) {
+      fileInput.value = "";
+    }
   }
 
   async function addGame(e: React.FormEvent) {
@@ -189,6 +201,21 @@ export default function AdminForms({
             <option value="recreational">Recreational</option>
           </select>
 
+          <label className="grid gap-2 text-sm font-bold text-neutral-300">
+            Team logo, optional
+            <input
+              id="team-logo-input"
+              className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setTeamLogo(e.target.files?.[0] || null)}
+            />
+          </label>
+
+          <p className="text-xs text-neutral-500">
+            If no logo is uploaded, the default rhino logo will be used.
+          </p>
+
           <button className="rounded-lg bg-orange-500 px-4 py-2 font-bold text-white hover:bg-orange-600">
             Add Team
           </button>
@@ -196,7 +223,9 @@ export default function AdminForms({
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-neutral-900/80 p-6 shadow-2xl shadow-black/30">
-        <h2 className="mb-4 text-2xl font-black text-white">Add Game Manually</h2>
+        <h2 className="mb-4 text-2xl font-black text-white">
+          Add Game Manually
+        </h2>
 
         <p className="mb-4 text-sm text-neutral-400">
           This is still useful for one-off games. For the main schedule, use the
@@ -251,7 +280,9 @@ export default function AdminForms({
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-neutral-900/80 p-6 shadow-2xl shadow-black/30">
-        <h2 className="mb-4 text-2xl font-black text-white">Enter Score Directly</h2>
+        <h2 className="mb-4 text-2xl font-black text-white">
+          Enter Score Directly
+        </h2>
 
         <p className="mb-4 text-sm text-neutral-400">
           Use this if you want to bypass public score submission and enter a

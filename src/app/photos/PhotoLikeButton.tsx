@@ -47,8 +47,8 @@ export default function PhotoLikeButton({
       disabled={hasLiked || isLiking}
       className={`rounded-full px-4 py-2 text-sm font-black transition ${
         hasLiked
-          ? "bg-pink-500/20 text-pink-300"
-          : "bg-white/10 text-white hover:bg-pink-500/20 hover:text-pink-300"
+          ? "bg-[#A51C30]/40 text-red-100"
+          : "bg-white/10 text-white hover:bg-[#A51C30]/40 hover:text-red-100"
       } disabled:cursor-not-allowed`}
     >
       {hasLiked ? "♥" : "♡"} {likes}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import LeagueBadge from "@/components/LeagueBadge";
 
 type League = "competitive" | "recreational";
 
@@ -312,13 +313,15 @@ export default function SchedulerClient({
           <h2 className="mb-4 text-2xl font-black text-white">League</h2>
 
           <select
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+            className="mb-3 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
             value={selectedLeague}
             onChange={(e) => setSelectedLeague(e.target.value as League)}
           >
             <option value="competitive">Competitive</option>
             <option value="recreational">Recreational</option>
           </select>
+
+          <LeagueBadge league={selectedLeague} />
         </section>
 
         <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
@@ -443,9 +446,10 @@ export default function SchedulerClient({
 
       <section className="space-y-8">
         <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <h2 className="mb-4 text-2xl font-black text-white">
-            Drag Game Pool
-          </h2>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <h2 className="text-2xl font-black text-white">Drag Game Pool</h2>
+            <LeagueBadge league={selectedLeague} />
+          </div>
 
           {unscheduledGames.length === 0 ? (
             <p className="text-neutral-400">
@@ -458,15 +462,18 @@ export default function SchedulerClient({
                   key={game.id}
                   draggable
                   onDragStart={(e) => onDragStart(e, game.id)}
-                  className="cursor-grab rounded-2xl border border-white/10 bg-black/30 p-4 active:cursor-grabbing"
+                  className={`cursor-grab rounded-2xl border p-4 active:cursor-grabbing ${
+                    game.league === "competitive"
+                      ? "border-cyan-400/20 bg-cyan-500/10"
+                      : "border-orange-400/20 bg-orange-500/10"
+                  }`}
                 >
                   <p className="font-black text-white">
                     {game.home_team?.name} vs {game.away_team?.name}
                   </p>
 
-                  <p className="text-sm text-neutral-500">
-                    {game.pool_group || game.round_label || "Unscheduled"} ·{" "}
-                    {game.league}
+                  <p className="text-sm text-neutral-400">
+                    {game.pool_group || game.round_label || "Unscheduled"}
                   </p>
                 </div>
               ))}
@@ -550,15 +557,23 @@ export default function SchedulerClient({
                     {slotGames.map((game) => (
                       <div
                         key={game.id}
-                        className="rounded-xl border border-white/10 bg-orange-500/10 p-3"
+                        className={`rounded-xl border p-3 ${
+                          game.league === "competitive"
+                            ? "border-cyan-400/20 bg-cyan-500/10"
+                            : "border-orange-400/20 bg-orange-500/10"
+                        }`}
                       >
                         <p className="font-black text-white">
                           {game.home_team?.name} vs {game.away_team?.name}
                         </p>
 
+                        <div className="mt-2">
+                          <LeagueBadge league={game.league} />
+                        </div>
+
                         <button
                           onClick={() => unscheduleGame(game.id)}
-                          className="mt-2 rounded-lg border border-white/10 px-3 py-1 text-xs font-black text-neutral-300 hover:bg-white/10"
+                          className="mt-3 rounded-lg border border-white/10 px-3 py-1 text-xs font-black text-neutral-300 hover:bg-white/10"
                         >
                           Move back to pool
                         </button>
@@ -596,7 +611,11 @@ export default function SchedulerClient({
               {scheduledGames.map((game) => (
                 <div
                   key={game.id}
-                  className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                  className={`rounded-2xl border p-4 ${
+                    game.league === "competitive"
+                      ? "border-cyan-400/20 bg-cyan-500/10"
+                      : "border-orange-400/20 bg-orange-500/10"
+                  }`}
                 >
                   <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
                     <div>
@@ -611,9 +630,14 @@ export default function SchedulerClient({
                         {game.location ? ` · ${game.location}` : ""}
                       </p>
 
-                      <p className="mt-1 text-xs text-neutral-500">
-                        {game.pool_group || game.round_label || game.league}
-                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <LeagueBadge league={game.league} />
+                        {game.pool_group && (
+                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-neutral-300">
+                            {game.pool_group}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <button

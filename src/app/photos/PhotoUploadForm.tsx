@@ -50,27 +50,27 @@ export default function PhotoUploadForm() {
   return (
     <form
       onSubmit={uploadPhoto}
-      className="mb-8 rounded-3xl border border-white/10 bg-neutral-900/80 p-5 text-white shadow-2xl shadow-black/30"
+      className="mb-8 rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-5 text-white shadow-2xl shadow-black/30"
     >
-      <h2 className="mb-4 text-2xl font-black">Post a photo</h2>
+      <h2 className="mb-4 text-2xl font-black text-[#F3EEE6]">Post a photo</h2>
 
       <div className="grid gap-4">
         <input
-          className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-neutral-500"
+          className="rounded-xl border border-[#A51C30]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/40"
           placeholder="Photo title, e.g. Opening night chaos"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
 
         <input
-          className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-neutral-500"
+          className="rounded-xl border border-[#A51C30]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/40"
           placeholder="Your name, optional"
           value={uploaderName}
           onChange={(e) => setUploaderName(e.target.value)}
         />
 
         <input
-          className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+          className="rounded-xl border border-[#A51C30]/25 bg-black/30 px-4 py-3 text-white"
           type="file"
           accept="image/*"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
@@ -78,12 +78,12 @@ export default function PhotoUploadForm() {
 
         <button
           disabled={isUploading}
-          className="rounded-xl bg-orange-500 px-5 py-3 font-black text-white transition hover:bg-orange-600 disabled:opacity-50"
+          className="rounded-xl bg-[#A51C30] px-5 py-3 font-black text-white transition hover:bg-[#7F1524] disabled:opacity-50"
         >
           {isUploading ? "Uploading..." : "Upload Photo"}
         </button>
 
-        {message && <p className="text-sm text-orange-300">{message}</p>}
+        {message && <p className="text-sm text-red-100">{message}</p>}
       </div>
     </form>
   );

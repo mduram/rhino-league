@@ -15,8 +15,9 @@ export default async function SchedulePage() {
       home_votes,
       away_votes,
       league,
-      home_team:teams!games_home_team_id_fkey(name),
-      away_team:teams!games_away_team_id_fkey(name)
+      submitted_score_pending,
+      home_team:teams!games_home_team_id_fkey(id, name, logo_url),
+      away_team:teams!games_away_team_id_fkey(id, name, logo_url)
     `)
     .in("status", ["scheduled", "completed"])
     .order("scheduled_at", { ascending: true });
@@ -45,7 +46,7 @@ export default async function SchedulePage() {
       </div>
 
       {scheduledGames.length === 0 && (
-        <p className="text-neutral-400">No games have been scheduled yet.</p>
+        <p className="text-red-100/60">No games have been scheduled yet.</p>
       )}
     </PageShell>
   );

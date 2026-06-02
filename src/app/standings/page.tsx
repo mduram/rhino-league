@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import PageShell from "@/components/PageShell";
+import LeagueBadge from "@/components/LeagueBadge";
+import TeamNameLink from "@/components/TeamNameLink";
 
 type Team = {
   id: string;
@@ -71,6 +73,7 @@ export default async function StandingsPage() {
     });
 
     return {
+      id: team.id,
       name: team.name,
       league: team.league,
       gamesPlayed,
@@ -100,9 +103,9 @@ export default async function StandingsPage() {
       title="Standings"
       subtitle="One mixed table across competitive and recreational leagues. Competitive wins currently carry a slightly higher weight."
     >
-      <div className="overflow-x-auto rounded-3xl border border-white/10 bg-neutral-900/80 shadow-2xl shadow-black/30">
+      <div className="overflow-x-auto rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 shadow-2xl shadow-black/30">
         <table className="w-full min-w-[850px] border-collapse">
-          <thead className="bg-white/[0.06] text-left">
+          <thead className="bg-[#A51C30]/20 text-left">
             <tr>
               <th className="p-4">Rank</th>
               <th className="p-4">Team</th>
@@ -119,22 +122,22 @@ export default async function StandingsPage() {
 
           <tbody>
             {standings.map((team, index) => (
-              <tr key={team.name} className="border-t border-white/10">
+              <tr key={team.id} className="border-t border-[#A51C30]/20">
                 <td className="p-4 font-black">{index + 1}</td>
 
-                <td className="p-4 font-black">{team.name}</td>
+                <td className="p-4 font-black">
+                  <TeamNameLink team={team} />
+                </td>
 
                 <td className="p-4">
-                  <span className="rounded-full bg-orange-500/15 px-3 py-1 text-xs font-black capitalize text-orange-300">
-                    {team.league}
-                  </span>
+                  <LeagueBadge league={team.league} />
                 </td>
 
                 <td className="p-4">{team.gamesPlayed}</td>
                 <td className="p-4">{team.wins}</td>
                 <td className="p-4">{team.losses}</td>
 
-                <td className="p-4 font-black text-orange-300">
+                <td className="p-4 font-black text-[#F3EEE6]">
                   {team.standingPoints.toFixed(2)}
                 </td>
 
@@ -147,7 +150,7 @@ export default async function StandingsPage() {
         </table>
       </div>
 
-      <p className="mt-4 text-sm text-neutral-500">
+      <p className="mt-4 text-sm text-red-100/50">
         Current ranking: standing points, then wins, then score differential.
         Competitive game weight defaults to 1.25, recreational to 1.00.
       </p>

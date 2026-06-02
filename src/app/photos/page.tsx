@@ -28,7 +28,7 @@ export default async function PhotosPage() {
       <PhotoUploadForm />
 
       {photos?.length === 0 && (
-        <p className="text-neutral-400">
+        <p className="text-red-100/60">
           No photos yet. Be the first to post one.
         </p>
       )}
@@ -37,7 +37,7 @@ export default async function PhotosPage() {
         {photos?.map((photo: any) => (
           <div
             key={photo.id}
-            className="group overflow-hidden rounded-3xl border border-white/10 bg-neutral-900/80 shadow-2xl shadow-black/30"
+            className="group overflow-hidden rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 shadow-2xl shadow-black/30"
           >
             <img
               src={photo.image_url}
@@ -55,12 +55,12 @@ export default async function PhotosPage() {
                   )}
 
                   {photo.uploader_name && (
-                    <p className="mt-1 text-sm text-neutral-400">
+                    <p className="mt-1 text-sm text-red-100/70">
                       Posted by {photo.uploader_name}
                     </p>
                   )}
 
-                  <p className="mt-2 text-xs text-neutral-500">
+                  <p className="mt-2 text-xs text-red-100/40">
                     {new Date(photo.created_at).toLocaleString()}
                   </p>
                 </div>

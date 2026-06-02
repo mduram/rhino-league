@@ -38,9 +38,9 @@ export default async function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 px-6 py-12 text-white">
+    <main className="min-h-screen px-6 py-12 text-white">
       <div className="mx-auto max-w-3xl">
-        <p className="mb-2 text-sm font-black uppercase tracking-[0.3em] text-orange-400">
+        <p className="mb-2 text-sm font-black uppercase tracking-[0.3em] text-[#F3EEE6]">
           Rhino League
         </p>
 
@@ -57,8 +57,15 @@ export default async function AdminPage() {
           </a>
 
           <a
+            href="/admin/import-teams"
+            className="rounded-full bg-[#A51C30] px-5 py-3 font-black text-white transition hover:bg-[#7F1524]"
+          >
+            Import Teams
+          </a>
+
+          <a
             href="/admin/scheduler"
-            className="rounded-full bg-orange-500 px-5 py-3 font-black text-white transition hover:bg-orange-600"
+            className="rounded-full bg-[#A51C30] px-5 py-3 font-black text-white transition hover:bg-[#7F1524]"
           >
             Open Scheduler
           </a>

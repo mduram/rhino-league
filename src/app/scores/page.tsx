@@ -15,8 +15,8 @@ export default async function ScoresPage() {
       home_votes,
       away_votes,
       league,
-      home_team:teams!games_home_team_id_fkey(name),
-      away_team:teams!games_away_team_id_fkey(name)
+      home_team:teams!games_home_team_id_fkey(id, name, logo_url),
+      away_team:teams!games_away_team_id_fkey(id, name, logo_url)
     `)
     .eq("status", "completed")
     .order("scheduled_at", { ascending: false });
@@ -43,7 +43,7 @@ export default async function ScoresPage() {
       </div>
 
       {games?.length === 0 && (
-        <p className="text-neutral-400">No completed games yet.</p>
+        <p className="text-red-100/60">No completed games yet.</p>
       )}
     </PageShell>
   );
