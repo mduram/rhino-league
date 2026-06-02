@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function AdminForms({
   teams,
@@ -9,7 +9,7 @@ export default function AdminForms({
   teams: any[];
   games: any[];
 }) {
-  const [password, setPassword] = useState("");
+  const [adminToken, setAdminToken] = useState("");
   const [message, setMessage] = useState("");
 
   const [teamName, setTeamName] = useState("");
@@ -26,9 +26,18 @@ export default function AdminForms({
   const [homeScore, setHomeScore] = useState("");
   const [awayScore, setAwayScore] = useState("");
 
+  useEffect(() => {
+    setAdminToken(localStorage.getItem("rhino_admin_token") || "");
+  }, []);
+
   async function addTeam(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
+
+    if (!adminToken) {
+      setMessage("You are not logged in as admin. Go to /admin/login first.");
+      return;
+    }
 
     const res = await fetch("/api/admin/add-team", {
       method: "POST",
@@ -36,7 +45,7 @@ export default function AdminForms({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        password,
+        adminToken,
         name: teamName,
         captain,
         color,
@@ -62,13 +71,18 @@ export default function AdminForms({
     e.preventDefault();
     setMessage("");
 
+    if (!adminToken) {
+      setMessage("You are not logged in as admin. Go to /admin/login first.");
+      return;
+    }
+
     const res = await fetch("/api/admin/add-game", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        password,
+        adminToken,
         homeTeamId,
         awayTeamId,
         scheduledAt,
@@ -94,13 +108,18 @@ export default function AdminForms({
     e.preventDefault();
     setMessage("");
 
+    if (!adminToken) {
+      setMessage("You are not logged in as admin. Go to /admin/login first.");
+      return;
+    }
+
     const res = await fetch("/api/admin/update-score", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        password,
+        adminToken,
         gameId: scoreGameId,
         homeScore,
         awayScore,
@@ -122,115 +141,126 @@ export default function AdminForms({
 
   return (
     <div className="grid gap-8">
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
-        <h2 className="mb-4 text-2xl font-black">Admin Password</h2>
+      <section className="rounded-2xl border border-white/10 bg-neutral-900/80 p-6 shadow-2xl shadow-black/30">
+        <h2 className="mb-2 text-2xl font-black text-white">Admin Mode</h2>
 
-        <input
-          className="w-full rounded-lg bg-neutral-800 px-3 py-2 text-white"
-          placeholder="Admin password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        {adminToken ? (
+          <p className="text-green-300">Admin mode active in this browser.</p>
+        ) : (
+          <p className="text-orange-300">
+            You are not logged in. Go to /admin/login first.
+          </p>
+        )}
 
         {message && <p className="mt-4 text-orange-400">{message}</p>}
       </section>
 
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
-        <h2 className="mb-4 text-2xl font-black">Add Team</h2>
+      <section className="rounded-2xl border border-white/10 bg-neutral-900/80 p-6 shadow-2xl shadow-black/30">
+        <h2 className="mb-4 text-2xl font-black text-white">Add Team</h2>
 
         <form onSubmit={addTeam} className="grid gap-3">
           <input
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white placeholder:text-neutral-500"
             placeholder="Team name"
             value={teamName}
             onChange={(e) => setTeamName(e.target.value)}
           />
-          <select
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
-            value = {teamLeague}
-            onChange={(e) => setTeamLeague(e.target.value)}
-            >
-              <option value="competitive">Competitive</option>
-              <option value="recreational">Recreational</option>
-            </select>
 
           <input
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white placeholder:text-neutral-500"
             placeholder="Captain"
             value={captain}
             onChange={(e) => setCaptain(e.target.value)}
           />
 
           <input
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white placeholder:text-neutral-500"
             placeholder="Color"
             value={color}
             onChange={(e) => setColor(e.target.value)}
           />
 
-          <button className="rounded-lg bg-orange-500 px-4 py-2 font-bold">
+          <select
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white"
+            value={teamLeague}
+            onChange={(e) => setTeamLeague(e.target.value)}
+          >
+            <option value="competitive">Competitive</option>
+            <option value="recreational">Recreational</option>
+          </select>
+
+          <button className="rounded-lg bg-orange-500 px-4 py-2 font-bold text-white hover:bg-orange-600">
             Add Team
           </button>
         </form>
       </section>
 
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
-        <h2 className="mb-4 text-2xl font-black">Add Game</h2>
+      <section className="rounded-2xl border border-white/10 bg-neutral-900/80 p-6 shadow-2xl shadow-black/30">
+        <h2 className="mb-4 text-2xl font-black text-white">Add Game Manually</h2>
+
+        <p className="mb-4 text-sm text-neutral-400">
+          This is still useful for one-off games. For the main schedule, use the
+          scheduler.
+        </p>
 
         <form onSubmit={addGame} className="grid gap-3">
           <select
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white"
             value={homeTeamId}
             onChange={(e) => setHomeTeamId(e.target.value)}
           >
             <option value="">Home team</option>
             {teams.map((team) => (
               <option key={team.id} value={team.id}>
-                {team.name}
+                {team.name} ({team.league})
               </option>
             ))}
           </select>
 
           <select
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white"
             value={awayTeamId}
             onChange={(e) => setAwayTeamId(e.target.value)}
           >
             <option value="">Away team</option>
             {teams.map((team) => (
               <option key={team.id} value={team.id}>
-                {team.name}
+                {team.name} ({team.league})
               </option>
             ))}
           </select>
 
           <input
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white"
             type="datetime-local"
             value={scheduledAt}
             onChange={(e) => setScheduledAt(e.target.value)}
           />
 
           <input
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white placeholder:text-neutral-500"
             placeholder="Location, e.g. Court 1"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
           />
 
-          <button className="rounded-lg bg-orange-500 px-4 py-2 font-bold">
+          <button className="rounded-lg bg-orange-500 px-4 py-2 font-bold text-white hover:bg-orange-600">
             Add Game
           </button>
         </form>
       </section>
 
-      <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
-        <h2 className="mb-4 text-2xl font-black">Enter Score</h2>
+      <section className="rounded-2xl border border-white/10 bg-neutral-900/80 p-6 shadow-2xl shadow-black/30">
+        <h2 className="mb-4 text-2xl font-black text-white">Enter Score Directly</h2>
+
+        <p className="mb-4 text-sm text-neutral-400">
+          Use this if you want to bypass public score submission and enter a
+          final score directly as admin.
+        </p>
 
         <form onSubmit={updateScore} className="grid gap-3">
           <select
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white"
             value={scoreGameId}
             onChange={(e) => setScoreGameId(e.target.value)}
           >
@@ -239,26 +269,28 @@ export default function AdminForms({
             {games.map((game) => (
               <option key={game.id} value={game.id}>
                 {game.home_team?.name} vs {game.away_team?.name} —{" "}
-                {new Date(game.scheduled_at).toLocaleDateString()}
+                {game.scheduled_at
+                  ? new Date(game.scheduled_at).toLocaleDateString()
+                  : "unscheduled"}
               </option>
             ))}
           </select>
 
           <input
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white placeholder:text-neutral-500"
             placeholder="Home score"
             value={homeScore}
             onChange={(e) => setHomeScore(e.target.value)}
           />
 
           <input
-            className="rounded-lg bg-neutral-800 px-3 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white placeholder:text-neutral-500"
             placeholder="Away score"
             value={awayScore}
             onChange={(e) => setAwayScore(e.target.value)}
           />
 
-          <button className="rounded-lg bg-orange-500 px-4 py-2 font-bold">
+          <button className="rounded-lg bg-orange-500 px-4 py-2 font-bold text-white hover:bg-orange-600">
             Save Score
           </button>
         </form>

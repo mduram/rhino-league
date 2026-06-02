@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isValidAdminToken } from "@/lib/adminAuth";
 
 export async function POST(request: Request) {
   const body = await request.json();
 
-  const { password, name, captain, color, league } = body;
+  const { adminToken, name, captain, color, league } = body;
 
-  if (password !== process.env.ADMIN_PASSWORD) {
+  if (!isValidAdminToken(adminToken)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

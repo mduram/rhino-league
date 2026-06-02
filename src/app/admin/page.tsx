@@ -5,6 +5,7 @@ export default async function AdminPage() {
   const { data: teams, error: teamsError } = await supabase
     .from("teams")
     .select("*")
+    .order("league", { ascending: true })
     .order("name", { ascending: true });
 
   const { data: games, error: gamesError } = await supabase
@@ -16,10 +17,12 @@ export default async function AdminPage() {
       status,
       home_score,
       away_score,
+      league,
+      submitted_score_pending,
       home_team:teams!games_home_team_id_fkey(name),
       away_team:teams!games_away_team_id_fkey(name)
     `)
-    .order("scheduled_at", { ascending: false });
+    .order("scheduled_at", { ascending: false, nullsFirst: false });
 
   if (teamsError || gamesError) {
     return (
@@ -37,13 +40,37 @@ export default async function AdminPage() {
   return (
     <main className="min-h-screen bg-neutral-950 px-6 py-12 text-white">
       <div className="mx-auto max-w-3xl">
-        <h1 className="mb-8 text-4xl font-black">Rhino League Admin</h1>
-        <a
-          href="/admin/scheduler"
-          className="mb-8 inline-block rounded-full bg-orange-500 px-5 py-3 font-black text-white transition hover:bg-orange-600"
-        >
-          Open Scheduler
-        </a>
+        <p className="mb-2 text-sm font-black uppercase tracking-[0.3em] text-orange-400">
+          Rhino League
+        </p>
+
+        <h1 className="mb-8 text-4xl font-black text-white">
+          Admin
+        </h1>
+
+        <div className="mb-8 flex flex-wrap gap-3">
+          <a
+            href="/admin/login"
+            className="rounded-full border border-white/10 px-5 py-3 font-black text-white transition hover:bg-white/10"
+          >
+            Admin Login
+          </a>
+
+          <a
+            href="/admin/scheduler"
+            className="rounded-full bg-orange-500 px-5 py-3 font-black text-white transition hover:bg-orange-600"
+          >
+            Open Scheduler
+          </a>
+
+          <a
+            href="/admin/score-submissions"
+            className="rounded-full bg-white/10 px-5 py-3 font-black text-white transition hover:bg-white/20"
+          >
+            Review Score Submissions
+          </a>
+        </div>
+
         <AdminForms teams={teams || []} games={games || []} />
       </div>
     </main>

@@ -1,25 +1,28 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import SchedulerClient from "./SchedulerClient";
 
 export default async function SchedulerPage() {
-  const { data: teams } = await supabase
+  const { data: teams } = await supabaseAdmin
     .from("teams")
     .select("*")
     .order("league", { ascending: true })
     .order("name", { ascending: true });
 
-  const { data: games } = await supabase
+  const { data: games } = await supabaseAdmin
     .from("games")
     .select(`
       id,
       scheduled_at,
       location,
+      court,
       status,
       home_score,
       away_score,
       league,
       round_label,
+      pool_group,
       weight,
+      submitted_score_pending,
       home_team_id,
       away_team_id,
       home_team:teams!games_home_team_id_fkey(name),
@@ -41,8 +44,8 @@ export default async function SchedulerPage() {
           </h1>
 
           <p className="mt-3 max-w-3xl text-neutral-400">
-            Generate game pools, schedule matches onto dates, and keep an eye
-            on balance between teams and leagues.
+            Generate balanced game pools, drag games into calendar slots, and
+            keep an eye on team balance.
           </p>
         </div>
 

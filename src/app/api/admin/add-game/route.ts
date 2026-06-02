@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isValidAdminToken } from "@/lib/adminAuth";
 
 export async function POST(request: Request) {
   const body = await request.json();
 
   const {
-    password,
+    adminToken,
     homeTeamId,
     awayTeamId,
     scheduledAt,
     location,
   } = body;
 
-  if (password !== process.env.ADMIN_PASSWORD) {
+  if (!isValidAdminToken(adminToken)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -36,10 +37,7 @@ export async function POST(request: Request) {
     .in("id", [homeTeamId, awayTeamId]);
 
   if (teamsError) {
-    return NextResponse.json(
-      { error: teamsError.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: teamsError.message }, { status: 500 });
   }
 
   if (!selectedTeams || selectedTeams.length !== 2) {
