@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import PageShell from "@/components/PageShell";
 import PhotoUploadForm from "./PhotoUploadForm";
+import PhotoLikeButton from "./PhotoLikeButton";
 
 export default async function PhotosPage() {
   const { data: photos, error } = await supabase
@@ -45,19 +46,30 @@ export default async function PhotosPage() {
             />
 
             <div className="p-5">
-              {photo.title && (
-                <h2 className="text-lg font-black text-white">{photo.title}</h2>
-              )}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  {photo.title && (
+                    <h2 className="text-lg font-black text-white">
+                      {photo.title}
+                    </h2>
+                  )}
 
-              {photo.uploader_name && (
-                <p className="mt-1 text-sm text-neutral-400">
-                  Posted by {photo.uploader_name}
-                </p>
-              )}
+                  {photo.uploader_name && (
+                    <p className="mt-1 text-sm text-neutral-400">
+                      Posted by {photo.uploader_name}
+                    </p>
+                  )}
 
-              <p className="mt-2 text-xs text-neutral-500">
-                {new Date(photo.created_at).toLocaleString()}
-              </p>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    {new Date(photo.created_at).toLocaleString()}
+                  </p>
+                </div>
+
+                <PhotoLikeButton
+                  photoId={photo.id}
+                  initialLikes={photo.likes || 0}
+                />
+              </div>
             </div>
           </div>
         ))}

@@ -7,12 +7,17 @@ export default async function ScoreSubmissionsPage() {
     .select(`
       id,
       game_id,
+      submitting_team_id,
       home_score,
       away_score,
       submitted_by,
       notes,
       status,
+      conflict,
+      auto_approved,
+      matched_submission_id,
       created_at,
+      submitting_team:teams!score_submissions_submitting_team_id_fkey(name),
       game:games (
         id,
         scheduled_at,

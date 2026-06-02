@@ -91,11 +91,23 @@ export default function ScoreSubmissionsClient({
       {submissions.map((submission) => (
         <div
           key={submission.id}
-          className="rounded-3xl border border-white/10 bg-neutral-900/80 p-6 shadow-2xl shadow-black/30"
+          className={`rounded-3xl border p-6 shadow-2xl shadow-black/30 ${
+            submission.conflict
+              ? "border-red-500/30 bg-red-500/10"
+              : "border-white/10 bg-neutral-900/80"
+          }`}
         >
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-400">
-            Pending score
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-400">
+              Pending score
+            </p>
+
+            {submission.conflict && (
+              <span className="rounded-full bg-red-500/20 px-3 py-1 text-xs font-black text-red-300">
+                Conflict
+              </span>
+            )}
+          </div>
 
           <h2 className="mt-2 text-2xl font-black text-white">
             {submission.game?.home_team?.name || "Home"} vs{" "}
@@ -106,7 +118,14 @@ export default function ScoreSubmissionsClient({
             {submission.home_score} - {submission.away_score}
           </p>
 
-          <p className="mt-3 text-sm text-neutral-400">
+          <p className="mt-3 text-sm text-neutral-300">
+            Submitted for:{" "}
+            <span className="font-black">
+              {submission.submitting_team?.name || "Unknown team"}
+            </span>
+          </p>
+
+          <p className="mt-1 text-sm text-neutral-400">
             Submitted by: {submission.submitted_by || "Anonymous"}
           </p>
 
@@ -125,7 +144,7 @@ export default function ScoreSubmissionsClient({
               onClick={() => approve(submission.id)}
               className="rounded-xl bg-green-600 px-5 py-3 font-black text-white hover:bg-green-700"
             >
-              Approve
+              Approve This Score
             </button>
 
             <button
