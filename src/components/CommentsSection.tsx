@@ -34,19 +34,12 @@ export default function CommentsSection({
   const [votingCommentId, setVotingCommentId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (defaultOpen) {
-      loadComments();
-    }
+    loadComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetType, targetId]);
 
-  async function toggleOpen() {
-    const nextOpen = !isOpen;
-    setIsOpen(nextOpen);
-
-    if (nextOpen && !hasLoadedOnce) {
-      await loadComments();
-    }
+  function toggleOpen() {
+    setIsOpen((current) => !current);
   }
 
   async function loadComments() {
@@ -113,6 +106,7 @@ export default function CommentsSection({
     setCommentBody("");
     setMessage("Comment posted.");
     setIsPosting(false);
+    setHasLoadedOnce(true);
   }
 
   async function voteComment(commentId: string, voteValue: 1 | -1) {
@@ -167,20 +161,26 @@ export default function CommentsSection({
         onClick={toggleOpen}
         className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition hover:bg-white/[0.04]"
       >
-        <div>
-          <p className="font-black text-white">
-            💬 {title}
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-black text-white">
+            💬 {title}{" "}
+            <span className="text-[#F3EEE6]">
+              ({hasLoadedOnce ? comments.length : "..."})
+            </span>
           </p>
 
-          <p className="mt-1 text-sm text-red-100/50">
-            {hasLoadedOnce
-              ? `${comments.length} comment${comments.length === 1 ? "" : "s"}`
-              : "Open to read or write comments"}
+          <p className="mt-1 truncate text-sm text-red-100/50">
+            {isLoading
+              ? "Loading comments..."
+              : comments.length === 0
+                ? "Open to write the first comment"
+                : "Open to read or write comments"}
           </p>
         </div>
 
-        <span className="rounded-full border border-[#A51C30]/30 bg-[#A51C30]/15 px-3 py-1 text-sm font-black text-red-100">
-          {isOpen ? "Hide ▲" : "Show ▼"}
+        <span className="flex shrink-0 items-center gap-1 rounded-full border border-[#A51C30]/30 bg-[#A51C30]/15 px-3 py-1 text-sm font-black text-red-100">
+          <span>{isOpen ? "Hide" : "Show"}</span>
+          <span>{isOpen ? "▲" : "▼"}</span>
         </span>
       </button>
 
@@ -196,7 +196,7 @@ export default function CommentsSection({
 
             <textarea
               className="min-h-24 rounded-xl border border-[#A51C30]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
-              placeholder="Say something nice, funny..."
+              placeholder="Say something nice, funny, or mildly spicy..."
               value={commentBody}
               onChange={(e) => setCommentBody(e.target.value)}
             />
@@ -234,8 +234,8 @@ export default function CommentsSection({
                 className="rounded-2xl border border-[#A51C30]/20 bg-black/25 p-4"
               >
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-black text-white">
+                  <div className="min-w-0">
+                    <p className="truncate font-black text-white">
                       {comment.author_name || "Anonymous Rhino"}
                     </p>
 
@@ -244,7 +244,7 @@ export default function CommentsSection({
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
                       type="button"
                       onClick={() => voteComment(comment.id, 1)}
@@ -269,7 +269,7 @@ export default function CommentsSection({
                   </div>
                 </div>
 
-                <p className="whitespace-pre-wrap text-sm leading-6 text-red-100/75">
+                <p className="whitespace-pre-wrap break-words text-sm leading-6 text-red-100/75">
                   {comment.body}
                 </p>
               </article>

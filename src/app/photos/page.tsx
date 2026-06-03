@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import PageShell from "@/components/PageShell";
 import PhotoGalleryClient from "@/components/PhotoGalleryClient";
+import PhotoUploadForm from "@/components/PhotoUploadForm";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,8 +25,10 @@ export default async function PhotosPage() {
   return (
     <PageShell
       title="Photos"
-      subtitle="League photos, comments, reactions, and Rhino League memories."
+      subtitle="Upload league photos, expand them, comment on them, and relive the Rhino League chaos."
     >
+      <PhotoUploadForm />
+
       <PhotoGalleryClient photos={photos || []} />
     </PageShell>
   );
