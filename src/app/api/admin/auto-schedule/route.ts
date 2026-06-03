@@ -92,6 +92,10 @@ function dayDifference(dateA: Date, dateB: Date) {
   return Math.abs(Math.round((a - b) / 86400000));
 }
 
+function daysFromStart(startDate: string, slotDate: Date) {
+  return dayDifference(parseDateInput(startDate), slotDate);
+}
+
 function buildLocalIso(dateString: string, hour: number) {
   const localDate = new Date(`${dateString}T${pad2(hour)}:00:00`);
   return localDate.toISOString();
@@ -150,9 +154,7 @@ function getMatchupKey(teamAId: string, teamBId: string) {
 
 function parseBlockedDates(value: unknown) {
   if (Array.isArray(value)) {
-    return value
-      .map((item) => String(item).trim())
-      .filter(Boolean);
+    return value.map((item) => String(item).trim()).filter(Boolean);
   }
 
   if (typeof value === "string") {
@@ -263,9 +265,75 @@ function spacingScoreForTeam({
   if (weekCount >= maxGamesPerWeek) {
     score -= 1000;
     notes.push(`${team.name} would exceed ${maxGamesPerWeek} games this week`);
-  } else if (weekCount === maxGamesPerWeek - 1) {
-    score -= 50;
-    notes.push(`${team.name} would reach weekly max`);
+  } else if (weekCount === 0) {
+    score += 120;
+    notes.push(`${team.name} has no game this week`);
+  } else if (weekCount === 1) {
+    score -= 40;
+    notes.push(`${team.name} would reach weekly max soon`);
+  }
+
+  return { score, notes };
+}
+
+function weeklyCoverageScoreForTeam({
+  team,
+  slot,
+  teamScheduledDates,
+  teamGamesByWeek,
+  teamTotalScheduled,
+  startDate,
+}: {
+  team: Team;
+  slot: Slot;
+  teamScheduledDates: Map<string, Date[]>;
+  teamGamesByWeek: Map<string, Map<string, number>>;
+  teamTotalScheduled: Map<string, number>;
+  startDate: string;
+}) {
+  let score = 0;
+  const notes: string[] = [];
+
+  const totalGames = teamTotalScheduled.get(team.id) || 0;
+  const weekMap = teamGamesByWeek.get(team.id) || new Map<string, number>();
+  const weekCount = weekMap.get(slot.weekKey) || 0;
+
+  if (totalGames === 0) {
+    score += 180;
+    notes.push(`${team.name} would get first game`);
+  }
+
+  if (weekCount === 0) {
+    score += 100;
+    notes.push(`${team.name} would play this week`);
+  }
+
+  const scheduledDates = teamScheduledDates.get(team.id) || [];
+
+  if (scheduledDates.length > 0) {
+    const mostRecentGame = scheduledDates
+      .slice()
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+
+    const daysSinceLastGame = dayDifference(slot.dateObject, mostRecentGame);
+
+    if (daysSinceLastGame >= 5 && daysSinceLastGame <= 9) {
+      score += 75;
+      notes.push(`${team.name} gets weekly rhythm`);
+    }
+
+    if (daysSinceLastGame > 9) {
+      score += 120;
+      notes.push(`${team.name} has waited a long time`);
+    }
+  }
+
+  const daysFromLeagueStart = daysFromStart(startDate, slot.dateObject);
+
+  if (totalGames === 0) {
+    score -= daysFromLeagueStart * 4;
+  } else {
+    score -= daysFromLeagueStart * 0.5;
   }
 
   return { score, notes };
@@ -321,6 +389,7 @@ function scoreGameSlot({
   maxGamesPerWeek,
   idealDaysBetweenGames,
   minimumDaysBetweenGames,
+  startDate,
 }: {
   game: CandidateGame;
   slot: Slot;
@@ -332,6 +401,7 @@ function scoreGameSlot({
   maxGamesPerWeek: number;
   idealDaysBetweenGames: number;
   minimumDaysBetweenGames: number;
+  startDate: string;
 }) {
   let score = 100;
   const notes: string[] = [];
@@ -366,6 +436,28 @@ function scoreGameSlot({
   score += homeSpacing.score;
   score += awaySpacing.score;
   notes.push(...homeSpacing.notes, ...awaySpacing.notes);
+
+  const homeWeeklyCoverage = weeklyCoverageScoreForTeam({
+    team: game.homeTeam,
+    slot,
+    teamScheduledDates,
+    teamGamesByWeek,
+    teamTotalScheduled,
+    startDate,
+  });
+
+  const awayWeeklyCoverage = weeklyCoverageScoreForTeam({
+    team: game.awayTeam,
+    slot,
+    teamScheduledDates,
+    teamGamesByWeek,
+    teamTotalScheduled,
+    startDate,
+  });
+
+  score += homeWeeklyCoverage.score;
+  score += awayWeeklyCoverage.score;
+  notes.push(...homeWeeklyCoverage.notes, ...awayWeeklyCoverage.notes);
 
   const repeatSpacing = repeatMatchupSpacingScore({
     game,
@@ -649,10 +741,7 @@ export async function POST(request: Request) {
   const parsedMinimumDaysBetweenGames = Number(minimumDaysBetweenGames || 1);
 
   const parsedBlockedDates = [
-    ...new Set([
-      ...DEFAULT_BLOCKED_DATES,
-      ...parseBlockedDates(blockedDates),
-    ]),
+    ...new Set([...DEFAULT_BLOCKED_DATES, ...parseBlockedDates(blockedDates)]),
   ];
 
   if (compGames < 1 && recGames < 1) {
@@ -764,6 +853,8 @@ export async function POST(request: Request) {
   }
 
   const availableSlots = [...slots];
+  const remainingGames = [...candidateGames];
+
   const unscheduledGames: CandidateGame[] = [];
   const scheduledRows: any[] = [];
   const report: any[] = [];
@@ -774,56 +865,53 @@ export async function POST(request: Request) {
   const matchupCounts = new Map<string, number>();
   const matchupScheduledDates = new Map<string, Date[]>();
 
-  for (const game of candidateGames) {
-    let bestSlot: Slot | null = null;
+  while (remainingGames.length > 0) {
+    let bestGameIndex = -1;
+    let bestSlotIndex = -1;
     let bestScore = -Infinity;
     let bestNotes: string[] = [];
 
-    for (const slot of availableSlots) {
-      const scored = scoreGameSlot({
-        game,
-        slot,
-        teamScheduledDates,
-        teamGamesByWeek,
-        teamTotalScheduled,
-        matchupCounts,
-        matchupScheduledDates,
-        maxGamesPerWeek: parsedMaxGamesPerWeek,
-        idealDaysBetweenGames: parsedIdealDaysBetweenGames,
-        minimumDaysBetweenGames: parsedMinimumDaysBetweenGames,
-      });
+    for (let gameIndex = 0; gameIndex < remainingGames.length; gameIndex++) {
+      const game = remainingGames[gameIndex];
 
-      if (scored.score > bestScore) {
-        bestScore = scored.score;
-        bestSlot = slot;
-        bestNotes = scored.notes;
+      for (let slotIndex = 0; slotIndex < availableSlots.length; slotIndex++) {
+        const slot = availableSlots[slotIndex];
+
+        const scored = scoreGameSlot({
+          game,
+          slot,
+          teamScheduledDates,
+          teamGamesByWeek,
+          teamTotalScheduled,
+          matchupCounts,
+          matchupScheduledDates,
+          maxGamesPerWeek: parsedMaxGamesPerWeek,
+          idealDaysBetweenGames: parsedIdealDaysBetweenGames,
+          minimumDaysBetweenGames: parsedMinimumDaysBetweenGames,
+          startDate,
+        });
+
+        if (scored.score > bestScore) {
+          bestScore = scored.score;
+          bestGameIndex = gameIndex;
+          bestSlotIndex = slotIndex;
+          bestNotes = scored.notes;
+        }
       }
     }
 
-    if (!bestSlot || bestScore < -500) {
-      unscheduledGames.push(game);
-      report.push({
-        game: `${game.homeTeam.name} vs ${game.awayTeam.name}`,
-        league: game.league,
-        status: "unscheduled",
-        score: bestScore,
-        repeatNumber: game.repeatNumber,
-        notes: bestNotes,
-      });
-      continue;
+    if (bestGameIndex < 0 || bestSlotIndex < 0 || bestScore < -500) {
+      unscheduledGames.push(...remainingGames);
+      remainingGames.splice(0, remainingGames.length);
+      break;
     }
 
-    const slotIndex = availableSlots.findIndex(
-      (slot) => slot.date === bestSlot?.date && slot.hour === bestSlot?.hour
-    );
-
-    if (slotIndex >= 0) {
-      availableSlots.splice(slotIndex, 1);
-    }
+    const game = remainingGames.splice(bestGameIndex, 1)[0];
+    const slot = availableSlots.splice(bestSlotIndex, 1)[0];
 
     addScheduledTeamDate({
       teamId: game.homeTeam.id,
-      slot: bestSlot,
+      slot,
       teamScheduledDates,
       teamGamesByWeek,
       teamTotalScheduled,
@@ -831,7 +919,7 @@ export async function POST(request: Request) {
 
     addScheduledTeamDate({
       teamId: game.awayTeam.id,
-      slot: bestSlot,
+      slot,
       teamScheduledDates,
       teamGamesByWeek,
       teamTotalScheduled,
@@ -839,7 +927,7 @@ export async function POST(request: Request) {
 
     addScheduledMatchupDate({
       matchupKey: game.matchupKey,
-      slot: bestSlot,
+      slot,
       matchupCounts,
       matchupScheduledDates,
     });
@@ -849,7 +937,7 @@ export async function POST(request: Request) {
       away_team_id: game.awayTeam.id,
       league: game.league,
       status: "scheduled",
-      scheduled_at: bestSlot.scheduledAt,
+      scheduled_at: slot.scheduledAt,
       location: location || "Court",
       court: location || "Court",
       weight: gameWeightForLeague(game.league),
@@ -864,8 +952,8 @@ export async function POST(request: Request) {
       game: `${game.homeTeam.name} vs ${game.awayTeam.name}`,
       league: game.league,
       status: "scheduled",
-      scheduledAt: bestSlot.scheduledAt,
-      slot: `${bestSlot.dayName} ${bestSlot.label}`,
+      scheduledAt: slot.scheduledAt,
+      slot: `${slot.dayName} ${slot.label}`,
       score: bestScore,
       repeatNumber: game.repeatNumber,
       notes: bestNotes,
@@ -884,6 +972,17 @@ export async function POST(request: Request) {
     round_label: "Regular Season",
     pool_group: "Auto Scheduler Could Not Place",
   }));
+
+  for (const game of unscheduledGames) {
+    report.push({
+      game: `${game.homeTeam.name} vs ${game.awayTeam.name}`,
+      league: game.league,
+      status: "unscheduled",
+      score: null,
+      repeatNumber: game.repeatNumber,
+      notes: ["could not place without breaking constraints"],
+    });
+  }
 
   const rowsToInsert = [...scheduledRows, ...unscheduledRows];
 
