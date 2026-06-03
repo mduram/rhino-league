@@ -61,7 +61,7 @@ export default async function HomePage() {
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#A51C30]/55 blur-3xl" />
           <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-[#C4963E]/20 blur-3xl" />
 
-          <div className="relative grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          <div className="relative grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
             <div>
               <p className="mb-4 text-sm font-black uppercase tracking-[0.35em] text-[#F3EEE6]">
                 Summer 2026
@@ -99,7 +99,7 @@ export default async function HomePage() {
                 <img
                   src={WINNERS_IMAGE_URL}
                   alt="2025 Rhino League winners"
-                  className="h-72 w-full object-cover sm:h-80 lg:h-96"
+                  className="h-72 w-full object-contain sm:h-96 lg:h-[28rem]"
                 />
 
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-5">
@@ -170,7 +170,9 @@ export default async function HomePage() {
               </div>
 
               <p className="mt-3 text-sm leading-6 text-red-100/45">
-
+                These are placeholders for now. Later we can point them to a PDF,
+                Google Doc, Harvard page, YouTube stream, Spotify song, or shared
+                folder.
               </p>
             </div>
           </div>
