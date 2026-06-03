@@ -8,42 +8,53 @@ export async function POST(request: Request) {
 
   if (!gameId) {
     return NextResponse.json(
-      { error: "Game ID is required" },
+      { error: "Missing game ID." },
       { status: 400 }
     );
   }
 
   if (side !== "home" && side !== "away") {
     return NextResponse.json(
-      { error: "Vote side must be home or away" },
+      { error: "Vote side must be home or away." },
       { status: 400 }
     );
   }
 
-  const { data: game, error: fetchError } = await supabaseAdmin
+  const { data: game, error: gameError } = await supabaseAdmin
     .from("games")
-    .select("home_votes, away_votes")
+    .select("id, home_votes, away_votes")
     .eq("id", gameId)
-    .single();
+    .maybeSingle();
 
-  if (fetchError) {
+  if (gameError) {
     return NextResponse.json(
-      { error: fetchError.message },
+      { error: gameError.message },
       { status: 500 }
     );
   }
 
-  const update =
-    side === "home"
-      ? { home_votes: Number(game.home_votes || 0) + 1 }
-      : { away_votes: Number(game.away_votes || 0) + 1 };
+  if (!game) {
+    return NextResponse.json(
+      { error: "Game not found." },
+      { status: 404 }
+    );
+  }
+
+  const nextHomeVotes =
+    side === "home" ? Number(game.home_votes || 0) + 1 : Number(game.home_votes || 0);
+
+  const nextAwayVotes =
+    side === "away" ? Number(game.away_votes || 0) + 1 : Number(game.away_votes || 0);
 
   const { data: updatedGame, error: updateError } = await supabaseAdmin
     .from("games")
-    .update(update)
+    .update({
+      home_votes: nextHomeVotes,
+      away_votes: nextAwayVotes,
+    })
     .eq("id", gameId)
-    .select("home_votes, away_votes")
-    .single();
+    .select("id, home_votes, away_votes")
+    .maybeSingle();
 
   if (updateError) {
     return NextResponse.json(
@@ -52,9 +63,16 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!updatedGame) {
+    return NextResponse.json(
+      { error: "Vote update failed. Game not found." },
+      { status: 404 }
+    );
+  }
+
   return NextResponse.json({
     success: true,
-    home_votes: updatedGame.home_votes,
-    away_votes: updatedGame.away_votes,
+    home_votes: updatedGame.home_votes || 0,
+    away_votes: updatedGame.away_votes || 0,
   });
 }
