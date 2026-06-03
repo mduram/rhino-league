@@ -3,6 +3,9 @@ import PageShell from "@/components/PageShell";
 import GameCard from "@/components/GameCard";
 import ScheduleCalendar from "@/components/ScheduleCalendar";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function SchedulePage() {
   const { data: games, error } = await supabase
     .from("games")

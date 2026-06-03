@@ -1,7 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import PageShell from "@/components/PageShell";
 import GameCard from "@/components/GameCard";
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function ScoresPage() {
   const { data: games, error } = await supabase
     .from("games")

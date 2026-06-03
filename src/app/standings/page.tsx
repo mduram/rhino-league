@@ -2,7 +2,8 @@ import { supabase } from "@/lib/supabase";
 import PageShell from "@/components/PageShell";
 import LeagueBadge from "@/components/LeagueBadge";
 import TeamNameLink from "@/components/TeamNameLink";
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 type Team = {
   id: string;
   name: string;

@@ -4,7 +4,8 @@ import GameCard from "@/components/GameCard";
 import SectionTitle from "@/components/SectionTitle";
 import SongOfTheDay from "@/components/SongOfTheDay";
 import RulesSection from "@/components/RulesSection";
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function HomePage() {
   const { data: upcomingGames } = await supabase
     .from("games")
