@@ -7,6 +7,7 @@ const links = [
   { href: "/standings", label: "Standings" },
   { href: "/teams", label: "Teams" },
   { href: "/photos", label: "Photos" },
+  { href: "/polls", label: "Polls"},
 ];
 
 export default function Navbar() {
