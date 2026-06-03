@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import PageShell from "@/components/PageShell";
 import LeagueBadge from "@/components/LeagueBadge";
-import TeamNameLink from "@/components/TeamNameLink";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
 type Team = {
   id: string;
   name: string;
@@ -19,6 +21,30 @@ type Game = {
   league: string;
   weight: number | null;
 };
+
+function getResultPoints({
+  league,
+  didWin,
+  didLose,
+}: {
+  league: string;
+  didWin: boolean;
+  didLose: boolean;
+}) {
+  if (!didWin && !didLose) return 0;
+
+  if (league === "competitive") {
+    if (didWin) return 3;
+    if (didLose) return -1;
+  }
+
+  if (league === "recreational") {
+    if (didWin) return 1;
+    if (didLose) return -2;
+  }
+
+  return 0;
+}
 
 export default async function StandingsPage() {
   const { data: teams, error: teamsError } = await supabase
@@ -58,19 +84,21 @@ export default async function StandingsPage() {
 
       const teamScore = isHome ? game.home_score : game.away_score;
       const opponentScore = isHome ? game.away_score : game.home_score;
-      const gameWeight = Number(game.weight || 1);
 
       pointsFor += teamScore;
       pointsAgainst += opponentScore;
 
-      if (teamScore > opponentScore) {
-        wins += 1;
-        standingPoints += gameWeight;
-      }
+      const didWin = teamScore > opponentScore;
+      const didLose = teamScore < opponentScore;
 
-      if (teamScore < opponentScore) {
-        losses += 1;
-      }
+      if (didWin) wins += 1;
+      if (didLose) losses += 1;
+
+      standingPoints += getResultPoints({
+        league: game.league,
+        didWin,
+        didLose,
+      });
     });
 
     return {
@@ -102,8 +130,21 @@ export default async function StandingsPage() {
   return (
     <PageShell
       title="Standings"
-      subtitle="One mixed table across competitive and recreational leagues. Competitive wins currently carry a slightly higher weight."
+      subtitle="One mixed table across competitive and recreational leagues, using Rhino League playoff seeding points."
     >
+      <div className="mb-5 rounded-3xl border border-[#C4963E]/30 bg-[#C4963E]/10 p-5 text-red-100/80">
+        <p className="font-black text-[#F3EEE6]">
+          Regular season playoff seeding:
+        </p>
+
+        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <p>Competitive win = +3 points</p>
+          <p>Competitive loss = -1 point</p>
+          <p>Recreational win = +1 point</p>
+          <p>Recreational loss = -2 points</p>
+        </div>
+      </div>
+
       <div className="overflow-x-auto rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 shadow-2xl shadow-black/30">
         <table className="w-full min-w-[850px] border-collapse">
           <thead className="bg-[#A51C30]/20 text-left">
@@ -114,7 +155,7 @@ export default async function StandingsPage() {
               <th className="p-4">GP</th>
               <th className="p-4">W</th>
               <th className="p-4">L</th>
-              <th className="p-4">Standing Pts</th>
+              <th className="p-4">Seeding Pts</th>
               <th className="p-4">PF</th>
               <th className="p-4">PA</th>
               <th className="p-4">Diff</th>
@@ -127,7 +168,12 @@ export default async function StandingsPage() {
                 <td className="p-4 font-black">{index + 1}</td>
 
                 <td className="p-4 font-black">
-                  <TeamNameLink team={team} />
+                  <Link
+                    href={`/teams/${team.id}`}
+                    className="text-white transition hover:text-[#F3EEE6] hover:underline"
+                  >
+                    {team.name}
+                  </Link>
                 </td>
 
                 <td className="p-4">
@@ -139,7 +185,7 @@ export default async function StandingsPage() {
                 <td className="p-4">{team.losses}</td>
 
                 <td className="p-4 font-black text-[#F3EEE6]">
-                  {team.standingPoints.toFixed(2)}
+                  {team.standingPoints}
                 </td>
 
                 <td className="p-4">{team.pointsFor}</td>
@@ -152,8 +198,7 @@ export default async function StandingsPage() {
       </div>
 
       <p className="mt-4 text-sm text-red-100/50">
-        Current ranking: standing points, then wins, then score differential.
-        Competitive game weight defaults to 1.25, recreational to 1.00.
+        Current ranking: seeding points, then wins, then score differential.
       </p>
     </PageShell>
   );

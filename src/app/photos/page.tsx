@@ -2,7 +2,8 @@ import { supabase } from "@/lib/supabase";
 import PageShell from "@/components/PageShell";
 import PhotoUploadForm from "./PhotoUploadForm";
 import PhotoLikeButton from "./PhotoLikeButton";
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function PhotosPage() {
   const { data: photos, error } = await supabase
     .from("photos")

@@ -155,7 +155,7 @@ export default function ScheduleCalendar({ games }: { games: any[] }) {
                         className="min-h-28 rounded-2xl border border-[#C4963E]/30 bg-[#C4963E]/10 p-3"
                       >
                         <p className="text-sm font-black text-[#F3EEE6]">
-                          Pick-up blocked
+                          Blocked for pickup
                         </p>
                       </div>
                     );
