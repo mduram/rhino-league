@@ -3,6 +3,7 @@ import GamePoll from "./GamePoll";
 import LeagueBadge from "./LeagueBadge";
 import TeamLogo from "./TeamLogo";
 import TeamNameLink from "./TeamNameLink";
+import CommentsSection from "./CommentsSection";
 import { formatLeagueDateTime } from "@/lib/leagueTime";
 
 function normalizeTeam(team: any) {
@@ -14,9 +15,11 @@ function normalizeTeam(team: any) {
 export default function GameCard({
   game,
   showPoll = false,
+  showComments = true,
 }: {
   game: any;
   showPoll?: boolean;
+  showComments?: boolean;
 }) {
   const isCompleted = game.status === "completed";
   const isUnscheduled = game.status === "unscheduled";
@@ -135,6 +138,14 @@ export default function GameCard({
             awayTeamName={awayName}
             initialHomeVotes={game.home_votes || 0}
             initialAwayVotes={game.away_votes || 0}
+          />
+        )}
+
+        {showComments && !isUnscheduled && (
+          <CommentsSection
+            targetType="game"
+            targetId={game.id}
+            title="Match comments"
           />
         )}
       </div>

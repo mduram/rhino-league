@@ -43,7 +43,7 @@ export default async function SchedulePage() {
   return (
     <PageShell
       title="Schedule"
-      subtitle="Upcoming matches, final scores, polls, and a weekly calendar view."
+      subtitle="Upcoming matches, final scores, polls, comments, and a weekly calendar view."
     >
       <div className="grid gap-8">
         <ScheduleCalendar games={scheduledGames} />
@@ -55,7 +55,12 @@ export default async function SchedulePage() {
 
           <div className="grid gap-5">
             {scheduledGames.map((game: any) => (
-              <GameCard key={game.id} game={game} showPoll />
+              <GameCard
+                key={game.id}
+                game={game}
+                showPoll
+                showComments
+              />
             ))}
           </div>
 
