@@ -3,6 +3,13 @@ import GamePoll from "./GamePoll";
 import LeagueBadge from "./LeagueBadge";
 import TeamLogo from "./TeamLogo";
 import TeamNameLink from "./TeamNameLink";
+import { formatLeagueDateTime } from "@/lib/leagueTime";
+
+function normalizeTeam(team: any) {
+  if (!team) return null;
+  if (Array.isArray(team)) return team[0] || null;
+  return team;
+}
 
 export default function GameCard({
   game,
@@ -14,8 +21,11 @@ export default function GameCard({
   const isCompleted = game.status === "completed";
   const isUnscheduled = game.status === "unscheduled";
 
-  const homeName = game.home_team?.name || "Home team";
-  const awayName = game.away_team?.name || "Away team";
+  const homeTeam = normalizeTeam(game.home_team);
+  const awayTeam = normalizeTeam(game.away_team);
+
+  const homeName = homeTeam?.name || "Home team";
+  const awayName = awayTeam?.name || "Away team";
 
   const leagueGlow =
     game.league === "competitive" ? "bg-[#C4963E]/20" : "bg-[#A51C30]/30";
@@ -47,7 +57,7 @@ export default function GameCard({
 
           {game.scheduled_at && (
             <span className="text-sm font-medium text-red-100/70">
-              {new Date(game.scheduled_at).toLocaleString()}
+              {formatLeagueDateTime(game.scheduled_at)}
             </span>
           )}
         </div>
@@ -55,7 +65,7 @@ export default function GameCard({
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
           <div className="flex items-center gap-3">
             <TeamLogo
-              logoUrl={game.home_team?.logo_url}
+              logoUrl={homeTeam?.logo_url}
               teamName={homeName}
               league={game.league}
               size="sm"
@@ -65,8 +75,9 @@ export default function GameCard({
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-100/45">
                 Home
               </p>
+
               <TeamNameLink
-                team={game.home_team}
+                team={homeTeam}
                 className="mt-1 block text-2xl font-black text-white"
               />
             </div>
@@ -91,14 +102,15 @@ export default function GameCard({
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-100/45">
                 Away
               </p>
+
               <TeamNameLink
-                team={game.away_team}
+                team={awayTeam}
                 className="mt-1 block text-2xl font-black text-white"
               />
             </div>
 
             <TeamLogo
-              logoUrl={game.away_team?.logo_url}
+              logoUrl={awayTeam?.logo_url}
               teamName={awayName}
               league={game.league}
               size="sm"

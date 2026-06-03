@@ -4,6 +4,7 @@ import PageShell from "@/components/PageShell";
 import GameCard from "@/components/GameCard";
 import LeagueBadge from "@/components/LeagueBadge";
 import TeamLogo from "@/components/TeamLogo";
+import { formatLeagueDateTime } from "@/lib/leagueTime";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -32,6 +33,10 @@ type Game = {
 };
 
 type NormalizedGame = Omit<Game, "home_team" | "away_team"> & {
+  home_score: number;
+  away_score: number;
+  home_votes: number;
+  away_votes: number;
   home_team: Team | null;
   away_team: Team | null;
 };
@@ -81,15 +86,7 @@ function getResultPoints({
 }
 
 function formatGameTime(value: string | null) {
-  if (!value) return "Time TBD";
-
-  return new Date(value).toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatLeagueDateTime(value);
 }
 
 export default async function PollsPage() {
@@ -134,10 +131,6 @@ export default async function PollsPage() {
 
   const scheduledGames = normalizedGames.filter(
     (game) => game.status === "scheduled"
-  );
-
-  const completedGames = normalizedGames.filter(
-    (game) => game.status === "completed"
   );
 
   const teamStats = new Map<
@@ -227,9 +220,7 @@ export default async function PollsPage() {
   });
 
   const statsArray = Array.from(teamStats.values()).map((team) => {
-    const winRate =
-      team.gamesPlayed > 0 ? team.wins / team.gamesPlayed : 0;
-
+    const winRate = team.gamesPlayed > 0 ? team.wins / team.gamesPlayed : 0;
     const differential = team.pointsFor - team.pointsAgainst;
 
     const powerScore =
