@@ -35,13 +35,55 @@ export default function AutoSchedulerClient() {
   const [idealDaysBetweenGames, setIdealDaysBetweenGames] = useState("2");
   const [maxGamesPerWeek, setMaxGamesPerWeek] = useState("2");
 
+  const [blockedDates, setBlockedDates] = useState(
+    "2026-06-19\n2026-07-03"
+  );
+
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<any>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setAdminToken(localStorage.getItem("rhino_admin_token") || "");
   }, []);
+
+  async function deleteAutoScheduledGames() {
+    setMessage("");
+    setResult(null);
+
+    if (!adminToken) {
+      setMessage("You are not logged in as admin. Go to /admin/login first.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete ALL auto-scheduled games? This will delete scheduled and unscheduled games created by the auto-scheduler. Manually created games and completed games should not be deleted."
+    );
+
+    if (!confirmed) return;
+
+    setIsDeleting(true);
+
+    const res = await fetch("/api/admin/delete-auto-scheduled-games", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ adminToken }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(data.error || `Delete failed. Status: ${res.status}`);
+      setIsDeleting(false);
+      return;
+    }
+
+    setMessage(data.message || `Deleted ${data.deleted} auto-scheduled games.`);
+    setIsDeleting(false);
+  }
 
   async function runAutoScheduler(e: React.FormEvent) {
     e.preventDefault();
@@ -81,6 +123,7 @@ export default function AutoSchedulerClient() {
         minimumDaysBetweenGames: Number(minimumDaysBetweenGames),
         idealDaysBetweenGames: Number(idealDaysBetweenGames),
         maxGamesPerWeek: Number(maxGamesPerWeek),
+        blockedDates,
       }),
     });
 
@@ -102,6 +145,26 @@ export default function AutoSchedulerClient() {
 
   return (
     <div className="grid gap-6">
+      <section className="rounded-3xl border border-red-500/25 bg-red-500/10 p-6 shadow-2xl shadow-black/30">
+        <h2 className="mb-3 text-2xl font-black text-white">
+          Danger Zone
+        </h2>
+
+        <p className="mb-4 text-sm leading-6 text-red-100/75">
+          Use this if the auto-scheduler made a bad schedule or you want to
+          start over. This deletes games whose pool group starts with Auto
+          Scheduled or Auto Scheduler. It does not target completed games.
+        </p>
+
+        <button
+          onClick={deleteAutoScheduledGames}
+          disabled={isDeleting}
+          className="rounded-xl bg-red-600 px-5 py-3 font-black text-white transition hover:bg-red-700 disabled:opacity-50"
+        >
+          {isDeleting ? "Deleting..." : "Delete All Auto-Scheduler Games"}
+        </button>
+      </section>
+
       <section className="rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-6 shadow-2xl shadow-black/30">
         <h2 className="mb-4 text-2xl font-black text-white">
           Scheduler Settings
@@ -239,6 +302,23 @@ export default function AutoSchedulerClient() {
 
           <label className="grid gap-2">
             <span className="text-sm font-bold text-red-100/70">
+              Blocked dates
+            </span>
+
+            <textarea
+              className="min-h-28 rounded-xl border border-[#C4963E]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/40"
+              value={blockedDates}
+              onChange={(e) => setBlockedDates(e.target.value)}
+            />
+
+            <span className="text-xs text-red-100/45">
+              One date per line in YYYY-MM-DD format. Juneteenth and July 3 are
+              included by default.
+            </span>
+          </label>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-bold text-red-100/70">
               Court / location name
             </span>
             <input
@@ -301,6 +381,11 @@ export default function AutoSchedulerClient() {
         </p>
 
         <p className="mt-3">
+          Blocked dates are excluded completely. By default, the scheduler blocks
+          2026-06-19 for Juneteenth and 2026-07-03.
+        </p>
+
+        <p className="mt-3">
           The scheduler tries to avoid games that are too close together,
           prefers at least 2 days between games, allows 1 day if necessary, and
           strongly avoids more than 2 games per team per week.
@@ -350,6 +435,18 @@ export default function AutoSchedulerClient() {
               </p>
             </div>
           </div>
+
+          {result.blockedDates && (
+            <div className="mb-4 rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-4">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#F3EEE6]">
+                Blocked Dates
+              </p>
+
+              <p className="mt-2 text-red-100/70">
+                {result.blockedDates.join(", ")}
+              </p>
+            </div>
+          )}
 
           <div className="max-h-[600px] overflow-auto rounded-2xl border border-[#A51C30]/20">
             <table className="w-full min-w-[1000px] border-collapse">

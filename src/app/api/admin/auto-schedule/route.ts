@@ -49,6 +49,11 @@ const DAY_NAMES = [
   "saturday",
 ];
 
+const DEFAULT_BLOCKED_DATES = [
+  "2026-06-19", // Juneteenth
+  "2026-07-03", // Friday before July 4
+];
+
 function pad2(value: number) {
   return String(value).padStart(2, "0");
 }
@@ -141,6 +146,23 @@ function isAfternoon(hour: number) {
 
 function getMatchupKey(teamAId: string, teamBId: string) {
   return [teamAId, teamBId].sort().join("__");
+}
+
+function parseBlockedDates(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(/\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 }
 
 function preferenceScore(team: Team, slot: Slot) {
@@ -374,8 +396,17 @@ function scoreGameSlot({
   return { score, notes };
 }
 
-function generateSlots(startDate: string, endDate: string) {
+function generateSlots({
+  startDate,
+  endDate,
+  blockedDates,
+}: {
+  startDate: string;
+  endDate: string;
+  blockedDates: string[];
+}) {
   const slots: Slot[] = [];
+  const blockedDateSet = new Set(blockedDates);
   const start = parseDateInput(startDate);
   const end = parseDateInput(endDate);
 
@@ -385,8 +416,9 @@ function generateSlots(startDate: string, endDate: string) {
     const day = cursor.getDay();
     const dayName = DAY_NAMES[day];
     const dateString = toDateString(cursor);
+    const isBlockedDate = blockedDateSet.has(dateString);
 
-    if (day >= 1 && day <= 5) {
+    if (day >= 1 && day <= 5 && !isBlockedDate) {
       for (const timeSlot of TIME_SLOTS) {
         const fridayAfter4 = day === 5 && timeSlot.hour >= 16;
 
@@ -592,6 +624,7 @@ export async function POST(request: Request) {
     maxGamesPerWeek,
     idealDaysBetweenGames,
     minimumDaysBetweenGames,
+    blockedDates,
   } = body;
 
   if (!isValidAdminToken(adminToken)) {
@@ -615,6 +648,13 @@ export async function POST(request: Request) {
   const parsedIdealDaysBetweenGames = Number(idealDaysBetweenGames || 2);
   const parsedMinimumDaysBetweenGames = Number(minimumDaysBetweenGames || 1);
 
+  const parsedBlockedDates = [
+    ...new Set([
+      ...DEFAULT_BLOCKED_DATES,
+      ...parseBlockedDates(blockedDates),
+    ]),
+  ];
+
   if (compGames < 1 && recGames < 1) {
     return NextResponse.json(
       { error: "At least one games-per-team value must be greater than 0." },
@@ -630,19 +670,33 @@ export async function POST(request: Request) {
   }
 
   if (clearExistingAutoScheduled) {
-    const { error: deleteAutoError } = await supabaseAdmin
+    const { data: autoGames, error: findAutoError } = await supabaseAdmin
       .from("games")
-      .delete()
+      .select("id")
       .in("status", ["scheduled", "unscheduled"])
-      .or(
-        "pool_group.ilike.Auto Scheduled%,pool_group.ilike.Auto Scheduler%"
-      );
+      .or("pool_group.ilike.Auto Scheduled%,pool_group.ilike.Auto Scheduler%");
 
-    if (deleteAutoError) {
+    if (findAutoError) {
       return NextResponse.json(
-        { error: deleteAutoError.message },
+        { error: findAutoError.message },
         { status: 500 }
       );
+    }
+
+    const autoGameIds = (autoGames || []).map((game) => game.id);
+
+    if (autoGameIds.length > 0) {
+      const { error: deleteAutoError } = await supabaseAdmin
+        .from("games")
+        .delete()
+        .in("id", autoGameIds);
+
+      if (deleteAutoError) {
+        return NextResponse.json(
+          { error: deleteAutoError.message },
+          { status: 500 }
+        );
+      }
     }
   }
 
@@ -696,7 +750,11 @@ export async function POST(request: Request) {
       : []),
   ];
 
-  const slots = generateSlots(startDate, endDate);
+  const slots = generateSlots({
+    startDate,
+    endDate,
+    blockedDates: parsedBlockedDates,
+  });
 
   if (slots.length === 0) {
     return NextResponse.json(
@@ -852,6 +910,7 @@ export async function POST(request: Request) {
     maxGamesPerWeek: parsedMaxGamesPerWeek,
     idealDaysBetweenGames: parsedIdealDaysBetweenGames,
     minimumDaysBetweenGames: parsedMinimumDaysBetweenGames,
+    blockedDates: parsedBlockedDates,
     deletedPreviousAutoScheduled: Boolean(clearExistingAutoScheduled),
     report,
   });
