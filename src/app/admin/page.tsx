@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import AdminForms from "./AdminForms";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AdminPage() {
   const { data: teams, error: teamsError } = await supabase
     .from("teams")
@@ -82,6 +85,13 @@ export default async function AdminPage() {
             className="rounded-full bg-white/10 px-5 py-3 font-black text-white transition hover:bg-white/20"
           >
             Review Score Submissions
+          </a>
+
+          <a
+            href="/admin/photos"
+            className="rounded-full bg-white/10 px-5 py-3 font-black text-white transition hover:bg-white/20"
+          >
+            Manage Photos
           </a>
         </div>
 

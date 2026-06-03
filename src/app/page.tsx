@@ -141,9 +141,6 @@ export default async function HomePage() {
               </div>
 
               <p className="mt-3 text-sm leading-6 text-red-100/45">
-                These are placeholders for now. Later we can point them to a PDF,
-                Google Doc, Harvard page, YouTube stream, Spotify song, or shared
-                folder.
               </p>
             </div>
           </div>
