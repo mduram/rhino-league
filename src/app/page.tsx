@@ -4,8 +4,13 @@ import GameCard from "@/components/GameCard";
 import SectionTitle from "@/components/SectionTitle";
 import SongOfTheDay from "@/components/SongOfTheDay";
 import RulesSection from "@/components/RulesSection";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+const WINNERS_IMAGE_URL =
+  "https://dmg5c1valy4me.cloudfront.net/wp-content/uploads/2025/09/05130547/2025_rhino-league_hex.jpg";
+
 export default async function HomePage() {
   const { data: upcomingGames } = await supabase
     .from("games")
@@ -56,33 +61,57 @@ export default async function HomePage() {
           <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#A51C30]/55 blur-3xl" />
           <div className="absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-[#C4963E]/20 blur-3xl" />
 
-          <div className="relative max-w-3xl">
-            <p className="mb-4 text-sm font-black uppercase tracking-[0.35em] text-[#F3EEE6]">
-              Summer 2026
-            </p>
+          <div className="relative grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+            <div>
+              <p className="mb-4 text-sm font-black uppercase tracking-[0.35em] text-[#F3EEE6]">
+                Summer 2026
+              </p>
 
-            <h1 className="text-5xl font-black tracking-tight sm:text-7xl">
-              The Rhino League
-            </h1>
+              <h1 className="text-5xl font-black tracking-tight sm:text-7xl">
+                The Rhino League
+              </h1>
 
-            <p className="mt-5 max-w-2xl text-lg text-red-100/80 sm:text-xl">
-              Schedules, scores, standings, polls, photos, and more
-            </p>
+              <p className="mt-5 max-w-2xl text-lg text-red-100/80 sm:text-xl">
+                Schedules, scores, standings, polls, photos, and more
+              </p>
 
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link
-                href="/schedule"
-                className="rounded-full bg-[#A51C30] px-6 py-3 font-black text-white shadow-lg shadow-[#A51C30]/35 transition hover:bg-[#7F1524]"
-              >
-                View Schedule
-              </Link>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link
+                  href="/schedule"
+                  className="rounded-full bg-[#A51C30] px-6 py-3 font-black text-white shadow-lg shadow-[#A51C30]/35 transition hover:bg-[#7F1524]"
+                >
+                  View Schedule
+                </Link>
 
-              <Link
-                href="/standings"
-                className="rounded-full border border-[#F3EEE6]/25 bg-white/[0.06] px-6 py-3 font-black text-white transition hover:bg-white/10"
-              >
-                League Table
-              </Link>
+                <Link
+                  href="/standings"
+                  className="rounded-full border border-[#F3EEE6]/25 bg-white/[0.06] px-6 py-3 font-black text-white transition hover:bg-white/10"
+                >
+                  League Table
+                </Link>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute -inset-3 rounded-[2rem] bg-[#A51C30]/25 blur-2xl" />
+
+              <div className="relative overflow-hidden rounded-[1.75rem] border border-[#F3EEE6]/20 bg-black/30 shadow-2xl shadow-black/50">
+                <img
+                  src={WINNERS_IMAGE_URL}
+                  alt="2025 Rhino League winners"
+                  className="h-72 w-full object-cover sm:h-80 lg:h-96"
+                />
+
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.25em] text-[#F3EEE6]">
+                    2025 Champions
+                  </p>
+
+                  <p className="mt-1 text-lg font-black text-white">
+                    Last year&apos;s winners
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -141,6 +170,7 @@ export default async function HomePage() {
               </div>
 
               <p className="mt-3 text-sm leading-6 text-red-100/45">
+
               </p>
             </div>
           </div>
