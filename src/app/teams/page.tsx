@@ -3,7 +3,8 @@ import PageShell from "@/components/PageShell";
 import LeagueBadge from "@/components/LeagueBadge";
 import TeamLogo from "@/components/TeamLogo";
 import TeamNameLink from "@/components/TeamNameLink";
-
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export default async function TeamsPage() {
   const { data: teams, error } = await supabase
     .from("teams")
