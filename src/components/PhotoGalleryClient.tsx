@@ -14,40 +14,95 @@ type Photo = {
 
 export default function PhotoGalleryClient({ photos }: { photos: Photo[] }) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [photoList, setPhotoList] = useState<Photo[]>(photos);
+  const [likingPhotoId, setLikingPhotoId] = useState<string | null>(null);
+
+  async function likePhoto(photoId: string) {
+    setLikingPhotoId(photoId);
+
+    const res = await fetch("/api/photos/like", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ photoId }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || `Could not like photo. Status: ${res.status}`);
+      setLikingPhotoId(null);
+      return;
+    }
+
+    setPhotoList((current) =>
+      current.map((photo) =>
+        photo.id === photoId
+          ? {
+              ...photo,
+              likes: Number(data.likes || 0),
+            }
+          : photo
+      )
+    );
+
+    setSelectedPhoto((current) =>
+      current?.id === photoId
+        ? {
+            ...current,
+            likes: Number(data.likes || 0),
+          }
+        : current
+    );
+
+    setLikingPhotoId(null);
+  }
 
   return (
     <>
-      {photos.length === 0 ? (
+      {photoList.length === 0 ? (
         <div className="rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-6 text-red-100/60 shadow-2xl shadow-black/30">
           No photos yet.
         </div>
       ) : (
         <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {photos.map((photo) => (
+          {photoList.map((photo) => (
             <article
               key={photo.id}
               className="overflow-hidden rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 shadow-2xl shadow-black/30"
             >
-              <button
-                onClick={() => setSelectedPhoto(photo)}
-                className="group relative block w-full text-left"
-              >
-                <img
-                  src={photo.image_url}
-                  alt={photo.title || "Rhino League photo"}
-                  className="h-72 w-full object-cover transition group-hover:scale-[1.03]"
-                />
+              <div className="group relative">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPhoto(photo)}
+                  className="block w-full text-left"
+                >
+                  <img
+                    src={photo.image_url}
+                    alt={photo.title || "Rhino League photo"}
+                    className="h-72 w-full object-cover transition group-hover:scale-[1.03]"
+                  />
 
-                <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
+                  <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/25" />
 
-                <div className="absolute bottom-3 right-3 rounded-full bg-black/75 px-3 py-1 text-sm font-black text-white">
-                  Expand
-                </div>
+                  <div className="absolute bottom-3 right-3 rounded-full bg-black/75 px-3 py-1 text-sm font-black text-white">
+                    Expand
+                  </div>
+                </button>
 
-                <div className="absolute right-3 top-3 rounded-full bg-black/75 px-3 py-1 text-sm font-black text-white">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    likePhoto(photo.id);
+                  }}
+                  disabled={likingPhotoId === photo.id}
+                  className="absolute right-3 top-3 rounded-full bg-black/75 px-3 py-1 text-sm font-black text-white transition hover:bg-[#A51C30] disabled:opacity-50"
+                >
                   ♥ {photo.likes || 0}
-                </div>
-              </button>
+                </button>
+              </div>
 
               <div className="p-5">
                 <h3 className="text-xl font-black text-white">
@@ -92,6 +147,15 @@ export default function PhotoGalleryClient({ photos }: { photos: Photo[] }) {
                 <h2 className="text-2xl font-black text-white">
                   {selectedPhoto.title || "Untitled photo"}
                 </h2>
+
+                <button
+                  type="button"
+                  onClick={() => likePhoto(selectedPhoto.id)}
+                  disabled={likingPhotoId === selectedPhoto.id}
+                  className="mt-3 rounded-full bg-[#A51C30] px-4 py-2 text-sm font-black text-white transition hover:bg-[#7F1524] disabled:opacity-50"
+                >
+                  ♥ Like ({selectedPhoto.likes || 0})
+                </button>
               </div>
 
               <button

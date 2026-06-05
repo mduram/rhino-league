@@ -3,37 +3,45 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
   const body = await request.json();
-
   const { photoId } = body;
 
   if (!photoId) {
     return NextResponse.json(
-      { error: "Photo ID is required." },
+      { error: "Missing photo ID." },
       { status: 400 }
     );
   }
 
-  const { data: photo, error: fetchError } = await supabaseAdmin
+  const { data: photo, error: photoError } = await supabaseAdmin
     .from("photos")
-    .select("likes")
+    .select("id, likes")
     .eq("id", photoId)
-    .single();
+    .maybeSingle();
 
-  if (fetchError) {
+  if (photoError) {
     return NextResponse.json(
-      { error: fetchError.message },
+      { error: photoError.message },
       { status: 500 }
     );
   }
 
-  const newLikes = Number(photo.likes || 0) + 1;
+  if (!photo) {
+    return NextResponse.json(
+      { error: "Photo not found." },
+      { status: 404 }
+    );
+  }
+
+  const nextLikes = Number(photo.likes || 0) + 1;
 
   const { data: updatedPhoto, error: updateError } = await supabaseAdmin
     .from("photos")
-    .update({ likes: newLikes })
+    .update({
+      likes: nextLikes,
+    })
     .eq("id", photoId)
-    .select("likes")
-    .single();
+    .select("id, likes")
+    .maybeSingle();
 
   if (updateError) {
     return NextResponse.json(
@@ -44,6 +52,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     success: true,
-    likes: updatedPhoto.likes,
+    likes: updatedPhoto?.likes || nextLikes,
   });
 }
