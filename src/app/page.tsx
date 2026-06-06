@@ -90,19 +90,7 @@ export default async function HomePage() {
                   League Table
                 </Link>
 
-                <Link
-                  href="/betting"
-                  className="rounded-full border border-[#C4963E]/40 bg-[#C4963E]/15 px-6 py-3 font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/25"
-                >
-                  Rhino Coin Betting
-                </Link>
 
-                <Link
-                  href="/donate"
-                  className="rounded-full bg-[#C4963E] px-6 py-3 font-black text-[#16070B] shadow-lg shadow-[#C4963E]/25 transition hover:bg-[#D7AA4A]"
-                >
-                  Donate
-                </Link>
               </div>
             </div>
 
@@ -130,8 +118,8 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <section className="mt-8 rounded-[2rem] border border-[#A51C30]/30 bg-[#230B12]/85 p-6 shadow-2xl shadow-black/30">
-          <div className="grid gap-8 lg:grid-cols-[1.15fr_1fr]">
+        <section className="mt-8 rounded-[2rem] border border-[#A51C30]/30 bg-[#230B12]/85 p-6 shadow-2xl shadow-black/30 md:p-8">
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
             <div>
               <p className="mb-2 text-sm font-black uppercase tracking-[0.25em] text-[#F3EEE6]">
                 About the league
@@ -141,127 +129,100 @@ export default async function HomePage() {
                 Welcome to The Rhino League
               </h2>
 
-              <p className="mt-4 text-lg leading-8 text-red-100/75">
+              <p className="mt-4 max-w-2xl text-lg leading-8 text-red-100/75">
                 The Rhino League is a Harvard volleyball competition bringing
                 together recreational and competitive teams for weekly games to
                 have fun and make the summer more interesting!
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  href="/schedule"
-                  className="rounded-full border border-[#A51C30]/30 bg-black/20 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-[#A51C30]/20"
-                >
-                  Schedule
-                </Link>
-
-                <Link
-                  href="/standings"
-                  className="rounded-full border border-[#A51C30]/30 bg-black/20 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-[#A51C30]/20"
-                >
-                  Standings
-                </Link>
-
-                <Link
-                  href="/photos"
-                  className="rounded-full border border-[#A51C30]/30 bg-black/20 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-[#A51C30]/20"
-                >
-                  Photos
-                </Link>
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-3 text-sm font-black uppercase tracking-[0.25em] text-[#F3EEE6]">
-                Useful links
+              <p className="mt-4 max-w-2xl text-base leading-7 text-red-100/55">
+                Check the latest schedule, submit scores, vote in polls, upload
+                photos, talk trash in comments, and use Rhino Coins to
+                predict games.
               </p>
 
-              <div className="grid gap-4">
-                <div className="rounded-3xl border border-[#A51C30]/25 bg-black/20 p-4">
-                  <p className="mb-3 text-sm font-black uppercase tracking-[0.18em] text-red-100/55">
-                    League essentials
-                  </p>
+              <Link
+                href="/donate"
+                className="mt-6 block max-w-md rounded-3xl border border-[#C4963E]/35 bg-[#C4963E]/15 p-5 transition hover:bg-[#C4963E]/25"
+              >
+                <p className="text-xl font-black text-white">
+                  Support the Rhino League
+                </p>
 
-                  <div className="flex flex-wrap gap-2">
-                    <a
-                      href="#rules"
-                      className="rounded-full bg-[#A51C30]/20 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-[#A51C30]/35"
-                    >
-                      Rules
-                    </a>
+                <p className="mt-2 text-sm leading-6 text-red-100/65">
+                  Help with website hosting, court supplies, and commissioner
+                  survival.
+                </p>
+              </Link>
+            </div>
 
-                    <a
-                      href="#faqs"
-                      className="rounded-full bg-[#A51C30]/20 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-[#A51C30]/35"
-                    >
-                      FAQs
-                    </a>
+            <div className="grid gap-4">
+              <div className="rounded-3xl border border-[#A51C30]/25 bg-black/20 p-5">
+                <p className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-red-100/55">
+                  League info
+                </p>
 
-                    <a
-                      href="#announcements"
-                      className="rounded-full bg-[#A51C30]/20 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-[#A51C30]/35"
-                    >
-                      Announcements
-                    </a>
-                  </div>
-                </div>
-
-                <div className="rounded-3xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-4">
-                  <p className="mb-3 text-sm font-black uppercase tracking-[0.18em] text-[#F3EEE6]">
-                    Rhino Coins
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      href="/betting"
-                      className="rounded-full bg-[#C4963E] px-4 py-2 text-sm font-black text-[#16070B] transition hover:bg-[#D7AA4A]"
-                    >
-                      Rhino Bets
-                    </Link>
-
-                    <Link
-                      href="/my-bets"
-                      className="rounded-full border border-[#C4963E]/30 bg-black/20 px-4 py-2 text-sm font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/20"
-                    >
-                      My Bets
-                    </Link>
-
-                    <Link
-                      href="/leaderboard"
-                      className="rounded-full border border-[#C4963E]/30 bg-black/20 px-4 py-2 text-sm font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/20"
-                    >
-                      Leaderboard
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Link
-                    href="/donate"
-                    className="rounded-3xl border border-[#C4963E]/35 bg-[#C4963E]/15 p-4 transition hover:bg-[#C4963E]/25"
+                <div className="flex flex-wrap gap-3">
+                  <a
+                    href="#rules"
+                    className="rounded-full bg-[#A51C30]/25 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-[#A51C30]/40 hover:text-white"
                   >
-                    <p className="font-black text-white">Donate</p>
-                    <p className="mt-1 text-sm leading-6 text-red-100/60">
-                      Help with hosting, supplies, and commissioner survival.
-                    </p>
-                  </Link>
+                    Rules
+                  </a>
 
                   <a
-                    href="#song-of-the-day"
-                    className="rounded-3xl border border-[#A51C30]/25 bg-black/20 p-4 transition hover:bg-[#A51C30]/20"
+                    href="#faqs"
+                    className="rounded-full bg-[#A51C30]/25 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-[#A51C30]/40 hover:text-white"
                   >
-                    <p className="font-black text-white">Song of the Day</p>
-                    <p className="mt-1 text-sm leading-6 text-red-100/60">
-                      The official soundtrack of rhino chaos.
-                    </p>
+                    FAQs
+                  </a>
+
+                  <a
+                    href="#announcements"
+                    className="rounded-full bg-[#A51C30]/25 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-[#A51C30]/40 hover:text-white"
+                  >
+                    Announcements
                   </a>
                 </div>
+              </div>
+
+              <div className="rounded-3xl border border-[#C4963E]/30 bg-[#C4963E]/10 p-5">
+                <p className="mb-4 text-sm font-black uppercase tracking-[0.2em] text-[#F3EEE6]">
+                  Rhino Coins
+                </p>
+
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href="/betting"
+                    className="rounded-full bg-[#C4963E] px-4 py-2 text-sm font-black text-[#16070B] transition hover:bg-[#D7AA4A]"
+                  >
+                    Rhino Bets
+                  </Link>
+
+                  <Link
+                    href="/my-bets"
+                    className="rounded-full border border-[#C4963E]/35 bg-black/20 px-4 py-2 text-sm font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/20"
+                  >
+                    My Bets
+                  </Link>
+
+                  <Link
+                    href="/leaderboard"
+                    className="rounded-full border border-[#C4963E]/35 bg-black/20 px-4 py-2 text-sm font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/20"
+                  >
+                    Leaderboard
+                  </Link>
+                </div>
+
+                <p className="mt-4 text-sm leading-6 text-red-100/60">
+                  Feel the emotion of the sand at the click of a button. Take control of the game!
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="mt-8 grid gap-5 lg:grid-cols-2">
+        <section className="mt-8 grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
           <div
             id="announcements"
             className="rounded-[2rem] border border-[#A51C30]/30 bg-[#230B12]/85 p-7 shadow-2xl shadow-black/30"
@@ -284,23 +245,8 @@ export default async function HomePage() {
                 </p>
 
                 <p className="mt-2 text-base leading-7 text-red-100/75">
-                  Create an account, get 100 fake Rhino Coins, predict match
-                  winners, and climb the leaderboard. No real money, only glory.
-                </p>
-              </Link>
-
-              <Link
-                href="/donate"
-                className="block rounded-2xl border border-[#C4963E]/35 bg-[#C4963E]/10 p-5 transition hover:bg-[#C4963E]/20"
-              >
-                <p className="text-xl font-black text-white">
-                  Support the Rhino League
-                </p>
-
-                <p className="mt-2 text-base leading-7 text-red-100/75">
-                  If you enjoy the league, consider donating to help with website
-                  hosting costs, court supplies, and food/drinks for the
-                  commissioner.
+                  Create an account, get 100 Rhino Coins, predict match
+                  winners, and climb the leaderboard.
                 </p>
               </Link>
 
@@ -326,7 +272,9 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <SongOfTheDay />
+          <div className="lg:max-w-sm lg:justify-self-end">
+            <SongOfTheDay />
+          </div>
         </section>
 
         <section className="mt-8 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">

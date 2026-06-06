@@ -123,7 +123,7 @@ export default function BettingClient() {
     setMessage(
       data.session
         ? "Account created. You got 100 Rhino Coins."
-        : "Account created. Check your email to confirm your account."
+        : "Account created"
     );
 
     if (data.session) {
@@ -231,7 +231,7 @@ export default function BettingClient() {
         </h2>
 
         <p className="mt-3 max-w-3xl text-red-100/75">
-          Everyone starts with 100 fake Rhino Coins. Use them to predict games.
+          Everyone starts with 100 Rhino Coins. Use them to predict games.
           Betting closes at scheduled game time. Rhino Coins are fake, non-cash,
           and just for league chaos.
         </p>
