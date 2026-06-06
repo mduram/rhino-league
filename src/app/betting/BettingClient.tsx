@@ -213,7 +213,7 @@ export default function BettingClient() {
 
   if (isLoading) {
     return (
-      <div className="rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-6 text-red-100/70">
+      <div className="rounded-3xl border border-[#C4963E]/30 bg-[#1A0F08]/90 p-6 text-red-100/70">
         Loading betting markets...
       </div>
     );
@@ -221,8 +221,8 @@ export default function BettingClient() {
 
   return (
     <div className="grid gap-8">
-      <section className="rounded-3xl border border-[#C4963E]/30 bg-[#C4963E]/10 p-6 shadow-2xl shadow-black/30">
-        <p className="mb-2 text-sm font-black uppercase tracking-[0.25em] text-[#F3EEE6]">
+      <section className="rounded-3xl border border-[#C4963E]/35 bg-[#1A0F08]/95 p-6 shadow-2xl shadow-black/30">
+        <p className="mb-2 text-sm font-black uppercase tracking-[0.25em] text-[#C4963E]">
           Rhino Coins
         </p>
 
@@ -236,17 +236,23 @@ export default function BettingClient() {
           and just for league chaos.
         </p>
 
+        <p className="mt-3 max-w-3xl rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-4 text-sm leading-6 text-[#F3EEE6]">
+          Odds are intentionally conservative early on. A small number of poll
+          votes or bets will only move the odds slightly until there is more
+          market activity.
+        </p>
+
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
             href="/my-bets"
-            className="rounded-full bg-[#A51C30] px-5 py-3 font-black text-white transition hover:bg-[#7F1524]"
+            className="rounded-full bg-[#8B5A1F] px-5 py-3 font-black text-white transition hover:bg-[#A66D28]"
           >
             My Bets
           </Link>
 
           <Link
             href="/leaderboard"
-            className="rounded-full border border-[#F3EEE6]/20 bg-white/[0.06] px-5 py-3 font-black text-white transition hover:bg-white/10"
+            className="rounded-full border border-[#C4963E]/30 bg-[#C4963E]/10 px-5 py-3 font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/20"
           >
             Rhino Leaderboard
           </Link>
@@ -254,7 +260,7 @@ export default function BettingClient() {
 
         {profile && (
           <div className="mt-5 rounded-2xl border border-[#C4963E]/30 bg-black/25 p-5">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#F3EEE6]">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#C4963E]">
               Your balance
             </p>
 
@@ -269,7 +275,7 @@ export default function BettingClient() {
         <section className="grid gap-5 lg:grid-cols-2">
           <form
             onSubmit={signIn}
-            className="rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-6 shadow-2xl shadow-black/30"
+            className="rounded-3xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-6 shadow-2xl shadow-black/30"
           >
             <h2 className="text-2xl font-black text-white">
               Log in
@@ -277,7 +283,7 @@ export default function BettingClient() {
 
             <div className="mt-5 grid gap-3">
               <input
-                className="rounded-xl border border-[#A51C30]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
+                className="rounded-xl border border-[#C4963E]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
                 placeholder="Email"
                 type="email"
                 value={email}
@@ -285,14 +291,14 @@ export default function BettingClient() {
               />
 
               <input
-                className="rounded-xl border border-[#A51C30]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
+                className="rounded-xl border border-[#C4963E]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
                 placeholder="Password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
 
-              <button className="rounded-xl bg-[#A51C30] px-5 py-3 font-black text-white transition hover:bg-[#7F1524]">
+              <button className="rounded-xl bg-[#8B5A1F] px-5 py-3 font-black text-white transition hover:bg-[#A66D28]">
                 Log In
               </button>
             </div>
@@ -300,7 +306,7 @@ export default function BettingClient() {
 
           <form
             onSubmit={signUp}
-            className="rounded-3xl border border-[#C4963E]/25 bg-[#230B12]/85 p-6 shadow-2xl shadow-black/30"
+            className="rounded-3xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-6 shadow-2xl shadow-black/30"
           >
             <h2 className="text-2xl font-black text-white">
               Create account
@@ -337,7 +343,7 @@ export default function BettingClient() {
           </form>
         </section>
       ) : (
-        <section className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-5">
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-5">
           <p className="text-red-100/70">
             Logged in as{" "}
             <span className="font-black text-white">
@@ -347,7 +353,7 @@ export default function BettingClient() {
 
           <button
             onClick={signOut}
-            className="rounded-full border border-white/15 bg-white/10 px-5 py-3 font-black text-white hover:bg-white/20"
+            className="rounded-full border border-[#C4963E]/25 bg-[#C4963E]/10 px-5 py-3 font-black text-[#F3EEE6] hover:bg-[#C4963E]/20"
           >
             Log out
           </button>
@@ -355,7 +361,7 @@ export default function BettingClient() {
       )}
 
       {message && (
-        <p className="rounded-2xl border border-[#A51C30]/30 bg-[#A51C30]/20 p-4 text-red-100">
+        <p className="rounded-2xl border border-[#C4963E]/30 bg-[#C4963E]/15 p-4 text-[#F3EEE6]">
           {message}
         </p>
       )}
@@ -375,11 +381,11 @@ export default function BettingClient() {
             return (
               <div
                 key={game.id}
-                className="rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-5 shadow-2xl shadow-black/30"
+                className="rounded-3xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-5 shadow-2xl shadow-black/30"
               >
                 <div className="mb-5 grid gap-4 md:grid-cols-3">
                   <div>
-                    <p className="text-sm font-black uppercase tracking-[0.2em] text-[#F3EEE6]">
+                    <p className="text-sm font-black uppercase tracking-[0.2em] text-[#C4963E]">
                       Game
                     </p>
 
@@ -430,7 +436,7 @@ export default function BettingClient() {
 
                 <GameCard game={game} showPoll />
 
-                <div className="mt-5 rounded-2xl border border-[#A51C30]/25 bg-black/20 p-4">
+                <div className="mt-5 rounded-2xl border border-[#C4963E]/25 bg-black/20 p-4">
                   <div className="mb-4 grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
                     <div className="rounded-2xl border border-[#A51C30]/25 bg-[#A51C30]/10 p-4">
                       <p className="font-black text-white">
@@ -491,7 +497,7 @@ export default function BettingClient() {
                     </span>
 
                     <input
-                      className="rounded-xl border border-[#A51C30]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
+                      className="rounded-xl border border-[#C4963E]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
                       type="number"
                       min="1"
                       placeholder="Example: 10"
@@ -510,7 +516,7 @@ export default function BettingClient() {
           })}
 
           {scheduledGames.length === 0 && (
-            <p className="rounded-2xl border border-[#A51C30]/25 bg-[#230B12]/70 p-5 text-red-100/60">
+            <p className="rounded-2xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-5 text-red-100/60">
               No scheduled games available for Rhino Coin predictions.
             </p>
           )}

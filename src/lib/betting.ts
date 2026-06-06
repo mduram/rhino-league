@@ -12,6 +12,12 @@ export type BettingMarket = {
   awayProbability: number;
 };
 
+const POLL_PRIOR_PER_SIDE = 6;
+const MARKET_PRIOR_PER_SIDE = 50;
+
+const MIN_PROBABILITY = 0.3;
+const MAX_PROBABILITY = 0.7;
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -48,23 +54,30 @@ export function calculateMarket({
   const totalMarket = homeAmount + awayAmount;
   const totalVotes = Number(homeVotes || 0) + Number(awayVotes || 0);
 
+  const adjustedHomeVotes = Number(homeVotes || 0) + POLL_PRIOR_PER_SIDE;
+  const adjustedAwayVotes = Number(awayVotes || 0) + POLL_PRIOR_PER_SIDE;
+
+  const adjustedHomeAmount = homeAmount + MARKET_PRIOR_PER_SIDE;
+  const adjustedAwayAmount = awayAmount + MARKET_PRIOR_PER_SIDE;
+
   const pollHomeProbability =
-    totalVotes > 0 ? Number(homeVotes || 0) / totalVotes : 0.5;
+    adjustedHomeVotes / (adjustedHomeVotes + adjustedAwayVotes);
 
   const marketHomeProbability =
-    totalMarket > 0 ? homeAmount / totalMarket : 0.5;
+    adjustedHomeAmount / (adjustedHomeAmount + adjustedAwayAmount);
 
   let homeProbability = 0.5;
 
   if (totalVotes > 0 && totalMarket > 0) {
-    homeProbability = pollHomeProbability * 0.5 + marketHomeProbability * 0.5;
+    homeProbability = pollHomeProbability * 0.35 + marketHomeProbability * 0.65;
   } else if (totalVotes > 0) {
     homeProbability = pollHomeProbability;
   } else if (totalMarket > 0) {
     homeProbability = marketHomeProbability;
   }
 
-  homeProbability = clamp(homeProbability, 0.1, 0.9);
+  homeProbability = clamp(homeProbability, MIN_PROBABILITY, MAX_PROBABILITY);
+
   const awayProbability = 1 - homeProbability;
 
   return {
