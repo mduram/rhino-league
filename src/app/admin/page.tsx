@@ -100,6 +100,20 @@ export default async function AdminPage() {
           >
             Manage Photos
           </a>
+
+          <a
+            href="/admin/betting"
+            className="rounded-full border border-[#C4963E]/40 bg-[#C4963E]/15 px-5 py-3 font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/25"
+          >
+            Manage Betting
+          </a>
+
+          <a
+            href="/betting"
+            className="rounded-full border border-[#F3EEE6]/20 bg-white/[0.06] px-5 py-3 font-black text-white transition hover:bg-white/10"
+          >
+            Public Betting Page
+          </a>
         </div>
 
         <AdminForms teams={teams || []} games={games || []} />
