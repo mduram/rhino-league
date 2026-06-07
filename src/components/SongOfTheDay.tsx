@@ -16,6 +16,24 @@ const SONG_LINKS = [
   "https://open.spotify.com/track/514joG57v4yKTsfQmz7stz?si=f2b5c0f00415456e",
   "https://open.spotify.com/track/7yNf9YjeO5JXUE3JEBgnYc?si=aba15db51cc14f3a",
   "https://open.spotify.com/track/6sGIMrtIzQjdzNndVxe397?si=5389382873a6431f",
+  "https://open.spotify.com/track/20jbSiX29FDX4oQxBXyUEi?si=f2031c9dee5441d0",
+  "https://open.spotify.com/track/5yvVYFDUpbnjcnRBgjwTzM?si=e275097157714890",
+  "https://open.spotify.com/track/3Qa944OTMZkg8DHjET8JQv?si=6144566d989f466a",
+  "https://open.spotify.com/track/5p7GiBZNL1afJJDUrOA6C8?si=a5426da8be244731",
+  "https://open.spotify.com/track/6y6EZKfsOZ7P3ALbnUuXik?si=1747064d3daf46d4",
+  "https://open.spotify.com/track/5MFqzWaYBe7Es4CHk66Iy3?si=c34e68f335aa45ce",
+  "https://open.spotify.com/track/3YuaBvuZqcwN3CEAyyoaei?si=c74467750e2b4562",
+  "https://open.spotify.com/track/1LuW4h5s9ZumBbMh7qhDDj?si=c7975ab5c71e4d51",
+  "https://open.spotify.com/track/1BLOVHYYlH4JUHQGcpt75R?si=998e58e95c5c4f6e",
+  "https://open.spotify.com/track/2ej1A2Ze6P2EOW7KfIosZR?si=88b0441769f544a4",
+  "https://open.spotify.com/track/0OP1RzrglC008kj79Httv3?si=d9450c0cee0d45ad",
+  "https://open.spotify.com/track/2mDYYGaGd9uXKkK2YhDA3i?si=a53dbac5ce7846a1",
+  "https://open.spotify.com/track/0fZu9ojDt6XZLDg6dos2EM?si=5f606f7ff83c4687",
+  "https://open.spotify.com/track/64DpBZj4IlDFzCwxTq7azl?si=38a4ab77423f4ddc",
+  "https://open.spotify.com/track/6dmXZ9B5HdFAyzHeTneYBK?si=b9f121890b214c3e",
+  "https://open.spotify.com/track/2zCLUq4EQi8ldF4B3AWC9W?si=0325ee2e0bbf4e32",
+  "https://open.spotify.com/track/53S5ccTpGJ0RiEGDeW9tzT?si=547d2193067f4126",
+
 
 
 
