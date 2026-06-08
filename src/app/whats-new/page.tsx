@@ -86,6 +86,30 @@ function formatTargetLabel({
   return "Rhino League";
 }
 
+function getCommentHref({
+  comment,
+  gamesById,
+}: {
+  comment: any;
+  gamesById: Record<string, any>;
+}) {
+  if (comment.target_type === "photo") {
+    return `/photos#comment-${comment.id}`;
+  }
+
+  if (comment.target_type === "game") {
+    const game = gamesById[comment.target_id];
+
+    if (game?.status === "completed") {
+      return `/scores#comment-${comment.id}`;
+    }
+
+    return `/polls#comment-${comment.id}`;
+  }
+
+  return `/whats-new#comment-${comment.id}`;
+}
+
 function sortNewest(items: any[]) {
   return [...items].sort(
     (a, b) =>
@@ -122,7 +146,10 @@ function uniqueFeedItems(items: any[]) {
       return;
     }
 
-    if (itemPriority === existingPriority && Number(item.heat || 0) > Number(existing.heat || 0)) {
+    if (
+      itemPriority === existingPriority &&
+      Number(item.heat || 0) > Number(existing.heat || 0)
+    ) {
       byCanonicalKey.set(key, item);
     }
   });
@@ -146,28 +173,29 @@ export default async function WhatsNewPage() {
     .order("created_at", { ascending: false })
     .limit(100);
 
-  const { data: completedGames, error: completedGamesError } = await supabaseAdmin
-    .from("games")
-    .select(`
-      id,
-      scheduled_at,
-      location,
-      status,
-      home_score,
-      away_score,
-      home_votes,
-      away_votes,
-      league,
-      home_team_id,
-      away_team_id,
-      is_forfeit,
-      forfeit_team_id,
-      home_team:teams!games_home_team_id_fkey(id, name, logo_url),
-      away_team:teams!games_away_team_id_fkey(id, name, logo_url)
-    `)
-    .eq("status", "completed")
-    .order("scheduled_at", { ascending: false })
-    .limit(80);
+  const { data: completedGames, error: completedGamesError } =
+    await supabaseAdmin
+      .from("games")
+      .select(`
+        id,
+        scheduled_at,
+        location,
+        status,
+        home_score,
+        away_score,
+        home_votes,
+        away_votes,
+        league,
+        home_team_id,
+        away_team_id,
+        is_forfeit,
+        forfeit_team_id,
+        home_team:teams!games_home_team_id_fkey(id, name, logo_url),
+        away_team:teams!games_away_team_id_fkey(id, name, logo_url)
+      `)
+      .eq("status", "completed")
+      .order("scheduled_at", { ascending: false })
+      .limit(80);
 
   const { data: pollGames, error: pollGamesError } = await supabaseAdmin
     .from("games")
@@ -276,12 +304,10 @@ export default async function WhatsNewPage() {
       subtitle: comment.author_name || "Anonymous Rhino",
       body: comment.body || "",
       createdAt: comment.created_at,
-      href:
-        comment.target_type === "photo"
-          ? "/photos"
-          : comment.target_type === "game"
-            ? "/polls"
-            : "/whats-new",
+      href: getCommentHref({
+        comment,
+        gamesById,
+      }),
       heat: Math.max(1, Number(comment.score || 0) + 1 + (isToday ? 4 : 0)),
       meta: {
         score: Number(comment.score || 0),
@@ -299,10 +325,7 @@ export default async function WhatsNewPage() {
     const todayCommentCount = todayCommentCountsByTarget[key] || 0;
     const commentScore = commentScoreByTarget[key] || 0;
     const heat =
-      likes * 3 +
-      commentCount * 4 +
-      todayCommentCount * 8 +
-      commentScore;
+      likes * 3 + commentCount * 4 + todayCommentCount * 8 + commentScore;
 
     return {
       id: `photo-${photo.id}`,
@@ -312,7 +335,7 @@ export default async function WhatsNewPage() {
       subtitle: "Photo",
       body: photo.description || photo.caption || "",
       createdAt: photo.created_at,
-      href: "/photos",
+      href: `/photos#comments-photo-${photo.id}`,
       heat,
       imageUrl: getPhotoUrl(photo),
       meta: {
@@ -333,11 +356,7 @@ export default async function WhatsNewPage() {
     const commentScore = commentScoreByTarget[key] || 0;
     const votes = Number(game.home_votes || 0) + Number(game.away_votes || 0);
     const heat =
-      8 +
-      votes * 2 +
-      commentCount * 4 +
-      todayCommentCount * 8 +
-      commentScore;
+      8 + votes * 2 + commentCount * 4 + todayCommentCount * 8 + commentScore;
 
     const forfeitingTeam =
       game.forfeit_team_id === game.home_team_id
@@ -358,7 +377,7 @@ export default async function WhatsNewPage() {
         ? `Forfeit by ${forfeitingTeam?.name || "unknown team"}`
         : "Final score posted",
       createdAt: game.scheduled_at,
-      href: "/scores",
+      href: `/scores#comments-game-${game.id}`,
       heat,
       game,
       meta: {
@@ -384,10 +403,7 @@ export default async function WhatsNewPage() {
       const todayCommentCount = todayCommentCountsByTarget[key] || 0;
       const commentScore = commentScoreByTarget[key] || 0;
       const heat =
-        votes * 2 +
-        commentCount * 4 +
-        todayCommentCount * 8 +
-        commentScore;
+        votes * 2 + commentCount * 4 + todayCommentCount * 8 + commentScore;
 
       return {
         id: `game-hot-${game.id}`,
@@ -397,7 +413,7 @@ export default async function WhatsNewPage() {
         subtitle: "Upcoming match",
         body: "People are voting/commenting on this matchup",
         createdAt: game.scheduled_at,
-        href: "/polls",
+        href: `/polls#comments-game-${game.id}`,
         heat,
         game,
         meta: {
@@ -445,11 +461,7 @@ export default async function WhatsNewPage() {
     }));
 
   const allItems = uniqueFeedItems(
-    sortNewest([
-      ...commentItems,
-      ...photoItems,
-      ...scoreItems,
-    ])
+    sortNewest([...commentItems, ...photoItems, ...scoreItems])
   ).slice(0, 120);
 
   const hotItems = uniqueFeedItems([

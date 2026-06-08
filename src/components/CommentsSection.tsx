@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Comment = {
   id: string;
@@ -11,6 +11,13 @@ type Comment = {
   score: number;
   created_at: string;
 };
+
+function sortCommentsChronologically(comments: Comment[]) {
+  return [...comments].sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+}
 
 export default function CommentsSection({
   targetType,
@@ -33,10 +40,49 @@ export default function CommentsSection({
   const [isPosting, setIsPosting] = useState(false);
   const [votingCommentId, setVotingCommentId] = useState<string | null>(null);
 
+  const commentsSectionId = useMemo(
+    () => `comments-${targetType}-${targetId}`,
+    [targetType, targetId]
+  );
+
   useEffect(() => {
     loadComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetType, targetId]);
+
+  useEffect(() => {
+    function openFromHash() {
+      if (typeof window === "undefined") return;
+
+      const hash = window.location.hash.replace("#", "");
+      if (!hash) return;
+
+      const pointsToThisSection = hash === commentsSectionId;
+      const pointsToOneOfTheseComments = comments.some(
+        (comment) => hash === `comment-${comment.id}`
+      );
+
+      if (pointsToThisSection || pointsToOneOfTheseComments) {
+        setIsOpen(true);
+
+        window.setTimeout(() => {
+          const element = document.getElementById(hash);
+          element?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }, 150);
+      }
+    }
+
+    openFromHash();
+
+    window.addEventListener("hashchange", openFromHash);
+
+    return () => {
+      window.removeEventListener("hashchange", openFromHash);
+    };
+  }, [comments, commentsSectionId]);
 
   async function loadComments() {
     if (!targetId) return;
@@ -62,7 +108,7 @@ export default function CommentsSection({
       return;
     }
 
-    setComments(data.comments || []);
+    setComments(sortCommentsChronologically(data.comments || []));
     setIsLoading(false);
     setHasLoadedOnce(true);
   }
@@ -100,7 +146,10 @@ export default function CommentsSection({
       return;
     }
 
-    setComments((current) => [data.comment, ...current]);
+    setComments((current) =>
+      sortCommentsChronologically([...current, data.comment])
+    );
+
     setCommentBody("");
     setMessage("Comment posted.");
     setIsPosting(false);
@@ -132,8 +181,8 @@ export default function CommentsSection({
     }
 
     setComments((current) =>
-      current
-        .map((comment) =>
+      sortCommentsChronologically(
+        current.map((comment) =>
           comment.id === commentId
             ? {
                 ...comment,
@@ -141,21 +190,17 @@ export default function CommentsSection({
               }
             : comment
         )
-        .sort((a, b) => {
-          if (b.score !== a.score) return b.score - a.score;
-
-          return (
-            new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime()
-          );
-        })
+      )
     );
 
     setVotingCommentId(null);
   }
 
   return (
-    <section className="mt-5 rounded-2xl border border-[#A51C30]/25 bg-black/20 p-4">
+    <section
+      id={commentsSectionId}
+      className="mt-5 scroll-mt-32 rounded-2xl border border-[#A51C30]/25 bg-black/20 p-4"
+    >
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
@@ -226,8 +271,9 @@ export default function CommentsSection({
 
             {comments.map((comment) => (
               <article
+                id={`comment-${comment.id}`}
                 key={comment.id}
-                className="rounded-2xl border border-[#A51C30]/20 bg-black/25 p-4"
+                className="scroll-mt-32 rounded-2xl border border-[#A51C30]/20 bg-black/25 p-4 target:border-[#C4963E]/60 target:bg-[#C4963E]/10 target:shadow-lg target:shadow-[#C4963E]/10"
               >
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
