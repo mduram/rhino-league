@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const mainLinks = [
+  { href: "/whats-new", label: "What’s New?" },
   { href: "/schedule", label: "Schedule" },
   { href: "/scores", label: "Scores" },
   { href: "/submit-scores", label: "Submit Scores" },
@@ -75,7 +76,9 @@ export default function Navbar() {
               className={`whitespace-nowrap rounded-full px-3 py-2 text-sm font-bold hover:text-white ${
                 link.href === "/donate"
                   ? "border border-[#C4963E]/35 bg-[#C4963E]/10 text-[#F3EEE6] hover:bg-[#C4963E]/20"
-                  : "text-red-100/80 hover:bg-[#A51C30]/25"
+                  : link.href === "/whats-new"
+                    ? "border border-[#F3EEE6]/20 bg-white/[0.06] text-white hover:bg-white/10"
+                    : "text-red-100/80 hover:bg-[#A51C30]/25"
               }`}
             >
               {link.label}
@@ -132,7 +135,9 @@ export default function Navbar() {
             className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-bold ${
               link.href === "/donate"
                 ? "bg-[#C4963E] text-[#16070B]"
-                : "bg-[#A51C30]/20 text-red-100"
+                : link.href === "/whats-new"
+                  ? "bg-white/10 text-white"
+                  : "bg-[#A51C30]/20 text-red-100"
             }`}
           >
             {link.label}
