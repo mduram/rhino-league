@@ -102,6 +102,16 @@ export default function MyBetsClient() {
     [bets]
   );
 
+  const gameBetCount = useMemo(
+    () => bets.filter((bet) => bet.bet_type === "game").length,
+    [bets]
+  );
+
+  const futuresBetCount = useMemo(
+    () => bets.filter((bet) => bet.bet_type === "futures").length,
+    [bets]
+  );
+
   async function loadMyBets(accessToken: string) {
     setMessage("");
 
@@ -202,9 +212,11 @@ export default function MyBetsClient() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <div className="mt-6 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
           <StatCard label="Balance" value={`${profile?.rhino_coins ?? 0} 🦏`} />
           <StatCard label="Open Bets" value={String(openBets.length)} />
+          <StatCard label="Game Bets" value={String(gameBetCount)} />
+          <StatCard label="Futures" value={String(futuresBetCount)} />
           <StatCard label="Total Staked" value={`${totalStaked} 🦏`} />
           <StatCard label="Total Won" value={`${totalWon} 🦏`} green />
         </div>
@@ -251,7 +263,7 @@ function StatCard({
       >
         {label}
       </p>
-      <p className="mt-2 text-4xl font-black text-white">
+      <p className="mt-2 text-3xl font-black text-white">
         {value}
       </p>
     </div>
@@ -274,9 +286,13 @@ function BetsList({
       </h2>
 
       <div className="grid gap-5">
-        {bets.map((bet) => (
-          <BetCard key={bet.id} bet={bet} />
-        ))}
+        {bets.map((bet) =>
+          bet.bet_type === "futures" ? (
+            <FuturesBetCard key={`futures-${bet.id}`} bet={bet} />
+          ) : (
+            <GameBetCard key={`game-${bet.id}`} bet={bet} />
+          )
+        )}
 
         {bets.length === 0 && (
           <p className="rounded-2xl border border-[#A51C30]/25 bg-[#230B12]/70 p-5 text-red-100/60">
@@ -288,7 +304,7 @@ function BetsList({
   );
 }
 
-function BetCard({ bet }: { bet: any }) {
+function GameBetCard({ bet }: { bet: any }) {
   const game = bet.game;
   const homeTeam = normalizeTeam(game?.home_team);
   const awayTeam = normalizeTeam(game?.away_team);
@@ -296,19 +312,7 @@ function BetCard({ bet }: { bet: any }) {
 
   return (
     <article className="rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-5 shadow-2xl shadow-black/30">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <span
-          className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wider ${statusClass(
-            bet.status
-          )}`}
-        >
-          {statusLabel(bet.status)}
-        </span>
-
-        <p className="text-sm text-red-100/60">
-          Placed {new Date(bet.created_at).toLocaleString()}
-        </p>
-      </div>
+      <BetHeader bet={bet} label="Game bet" />
 
       {game ? (
         <div className="grid gap-5 md:grid-cols-[1fr_auto_1fr] md:items-center">
@@ -377,6 +381,85 @@ function BetCard({ bet }: { bet: any }) {
         </p>
       )}
     </article>
+  );
+}
+
+function FuturesBetCard({ bet }: { bet: any }) {
+  const market = Array.isArray(bet.market) ? bet.market[0] : bet.market;
+  const option = Array.isArray(bet.option) ? bet.option[0] : bet.option;
+  const team = normalizeTeam(option?.team);
+
+  return (
+    <article className="rounded-3xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-5 shadow-2xl shadow-black/30">
+      <BetHeader bet={bet} label="Futures bet" />
+
+      <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center">
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-[#C4963E]">
+            {market?.title || "Futures Market"}
+          </p>
+
+          <h3 className="mt-2 text-2xl font-black text-white">
+            {option?.label || "Unknown pick"}
+          </h3>
+
+          {market?.description && (
+            <p className="mt-2 text-sm leading-6 text-red-100/60">
+              {market.description}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-4">
+          <TeamLogo
+            logoUrl={team?.logo_url || null}
+            teamName={option?.label || "Team"}
+            league={team?.league || "competitive"}
+            size="sm"
+          />
+
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#F3EEE6]">
+              Pick
+            </p>
+            <p className="font-black text-white">
+              {option?.label || "Unknown"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-4">
+        <InfoBox label="Market" value={market?.title || "Futures"} gold />
+        <InfoBox label="Amount" value={`${bet.amount} 🦏`} />
+        <InfoBox label="Odds" value={`${Number(bet.odds || 0).toFixed(2)}x`} />
+        <InfoBox label="Potential Payout" value={`${bet.potential_payout} 🦏`} green />
+      </div>
+    </article>
+  );
+}
+
+function BetHeader({ bet, label }: { bet: any; label: string }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-[#C4963E]/25 bg-[#C4963E]/10 px-3 py-1 text-xs font-black uppercase tracking-wider text-[#F3EEE6]">
+          {label}
+        </span>
+
+        <span
+          className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wider ${statusClass(
+            bet.status
+          )}`}
+        >
+          {statusLabel(bet.status)}
+        </span>
+      </div>
+
+      <p className="text-sm text-red-100/60">
+        Placed {new Date(bet.created_at).toLocaleString()}
+      </p>
+    </div>
   );
 }
 

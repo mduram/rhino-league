@@ -39,20 +39,20 @@ export async function GET(request: Request) {
     );
   }
 
-  const { data: bets, error: betsError } = await supabaseAdmin
+  const { data: gameBets, error: gameBetsError } = await supabaseAdmin
     .from("game_bets")
     .select("*")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (betsError) {
+  if (gameBetsError) {
     return NextResponse.json(
-      { error: betsError.message },
+      { error: gameBetsError.message },
       { status: 500 }
     );
   }
 
-  const gameIds = [...new Set((bets || []).map((bet) => bet.game_id))];
+  const gameIds = [...new Set((gameBets || []).map((bet) => bet.game_id))];
 
   let gamesById: Record<string, any> = {};
 
@@ -84,10 +84,59 @@ export async function GET(request: Request) {
     gamesById = Object.fromEntries((games || []).map((game) => [game.id, game]));
   }
 
-  const hydratedBets = (bets || []).map((bet) => ({
+  const hydratedGameBets = (gameBets || []).map((bet) => ({
     ...bet,
+    bet_type: "game",
     game: gamesById[bet.game_id] || null,
   }));
+
+  const { data: futuresBets, error: futuresBetsError } = await supabaseAdmin
+    .from("futures_bets")
+    .select(`
+      id,
+      user_id,
+      market_id,
+      option_id,
+      amount,
+      odds,
+      potential_payout,
+      status,
+      created_at,
+      market:futures_markets(
+        id,
+        slug,
+        title,
+        description,
+        status,
+        closes_at,
+        winning_option_id
+      ),
+      option:futures_options(
+        id,
+        team_id,
+        label,
+        team:teams(id, name, logo_url, league)
+      )
+    `)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (futuresBetsError) {
+    return NextResponse.json(
+      { error: futuresBetsError.message },
+      { status: 500 }
+    );
+  }
+
+  const hydratedFuturesBets = (futuresBets || []).map((bet) => ({
+    ...bet,
+    bet_type: "futures",
+  }));
+
+  const allBets = [...hydratedGameBets, ...hydratedFuturesBets].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
 
   return NextResponse.json({
     success: true,
@@ -96,6 +145,8 @@ export async function GET(request: Request) {
       email: user.email,
     },
     profile,
-    bets: hydratedBets,
+    bets: allBets,
+    gameBets: hydratedGameBets,
+    futuresBets: hydratedFuturesBets,
   });
 }

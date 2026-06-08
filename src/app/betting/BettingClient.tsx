@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import GameCard from "@/components/GameCard";
+import TeamLogo from "@/components/TeamLogo";
 import { formatLeagueDateTime } from "@/lib/leagueTime";
 
 function normalizeTeam(team: any) {
@@ -17,17 +18,45 @@ function isBettingClosed(game: any) {
   return Date.now() >= new Date(game.scheduled_at).getTime();
 }
 
+async function readJsonSafely(res: Response) {
+  const text = await res.text();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      error: `Server returned non-JSON response. Status: ${res.status}.`,
+      raw: text.slice(0, 300),
+    };
+  }
+}
+
 export default function BettingClient() {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+
   const [games, setGames] = useState<any[]>([]);
-  const [marketsByGameId, setMarketsByGameId] = useState<Record<string, any>>({});
+  const [marketsByGameId, setMarketsByGameId] = useState<Record<string, any>>(
+    {}
+  );
+
+  const [futuresMarkets, setFuturesMarkets] = useState<any[]>([]);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+
   const [message, setMessage] = useState("");
   const [betAmounts, setBetAmounts] = useState<Record<string, string>>({});
+  const [futuresAmounts, setFuturesAmounts] = useState<Record<string, string>>(
+    {}
+  );
+
   const [placingBetKey, setPlacingBetKey] = useState<string | null>(null);
+  const [placingFuturesKey, setPlacingFuturesKey] = useState<string | null>(
+    null
+  );
+
   const [isLoading, setIsLoading] = useState(true);
 
   const scheduledGames = useMemo(() => {
@@ -39,7 +68,7 @@ export default function BettingClient() {
       const { data } = await supabase.auth.getSession();
       setSession(data.session || null);
 
-      await loadMarkets();
+      await Promise.all([loadGameMarkets(), loadFuturesMarkets()]);
 
       if (data.session) {
         await loadMe(data.session.access_token);
@@ -67,20 +96,35 @@ export default function BettingClient() {
     };
   }, []);
 
-  async function loadMarkets() {
+  async function loadGameMarkets() {
     const res = await fetch("/api/betting/markets", {
       cache: "no-store",
     });
 
-    const data = await res.json();
+    const data = await readJsonSafely(res);
 
     if (!res.ok) {
-      setMessage(data.error || "Could not load betting markets.");
+      setMessage(data.error || "Could not load game betting markets.");
       return;
     }
 
     setGames(data.games || []);
     setMarketsByGameId(data.marketsByGameId || {});
+  }
+
+  async function loadFuturesMarkets() {
+    const res = await fetch("/api/futures/markets", {
+      cache: "no-store",
+    });
+
+    const data = await readJsonSafely(res);
+
+    if (!res.ok) {
+      setMessage(data.error || "Could not load futures markets.");
+      return;
+    }
+
+    setFuturesMarkets(data.markets || []);
   }
 
   async function loadMe(accessToken: string) {
@@ -91,7 +135,7 @@ export default function BettingClient() {
       cache: "no-store",
     });
 
-    const data = await res.json();
+    const data = await readJsonSafely(res);
 
     if (!res.ok) {
       setMessage(data.error || "Could not load profile.");
@@ -123,7 +167,7 @@ export default function BettingClient() {
     setMessage(
       data.session
         ? "Account created. You got 100 Rhino Coins."
-        : "Account created"
+        : "Account created."
     );
 
     if (data.session) {
@@ -187,7 +231,7 @@ export default function BettingClient() {
       }),
     });
 
-    const data = await res.json();
+    const data = await readJsonSafely(res);
 
     if (!res.ok) {
       setMessage(data.error || `Could not place bet. Status: ${res.status}`);
@@ -205,10 +249,65 @@ export default function BettingClient() {
       [gameId]: "",
     }));
 
-    await loadMarkets();
+    await loadGameMarkets();
 
     setMessage("Rhino Coin pick placed.");
     setPlacingBetKey(null);
+  }
+
+  async function placeFuturesBet(marketId: string, optionId: string) {
+    if (!session) {
+      setMessage("Log in first.");
+      return;
+    }
+
+    const amount = Number(futuresAmounts[marketId] || 0);
+
+    if (!amount || amount <= 0) {
+      setMessage("Enter a Rhino Coin amount first.");
+      return;
+    }
+
+    setPlacingFuturesKey(`${marketId}-${optionId}`);
+    setMessage("");
+
+    const res = await fetch("/api/futures/place", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        marketId,
+        optionId,
+        amount,
+      }),
+    });
+
+    const data = await readJsonSafely(res);
+
+    if (!res.ok) {
+      setMessage(
+        data.error || `Could not place futures pick. Status: ${res.status}`
+      );
+      setPlacingFuturesKey(null);
+      return;
+    }
+
+    setProfile((current: any) => ({
+      ...current,
+      rhino_coins: data.rhinoCoins,
+    }));
+
+    setFuturesAmounts((current) => ({
+      ...current,
+      [marketId]: "",
+    }));
+
+    await loadFuturesMarkets();
+
+    setMessage("Futures pick placed.");
+    setPlacingFuturesKey(null);
   }
 
   if (isLoading) {
@@ -231,15 +330,15 @@ export default function BettingClient() {
         </h2>
 
         <p className="mt-3 max-w-3xl text-red-100/75">
-          Everyone starts with 100 Rhino Coins. Use them to predict games.
-          Betting closes at scheduled game time. Rhino Coins are fake, non-cash,
-          and just for league chaos.
+          Everyone starts with 100 Rhino Coins. Use them to predict games,
+          futures markets, tournament outcomes, and regular-season table results.
+          Rhino Coins are fake, non-cash, and just for league chaos.
         </p>
 
         <p className="mt-3 max-w-3xl rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-4 text-sm leading-6 text-[#F3EEE6]">
-          Odds are intentionally conservative early on. A small number of poll
-          votes or bets will only move the odds slightly until there is more
-          market activity.
+          Futures odds now combine current Rhino Coin bets, game poll popularity,
+          and historical team performance. Bottom-of-table odds invert the
+          performance and poll signals.
         </p>
 
         <div className="mt-5 flex flex-wrap gap-3">
@@ -368,7 +467,44 @@ export default function BettingClient() {
 
       <section>
         <h2 className="mb-4 text-3xl font-black text-[#F3EEE6]">
-          Open Markets
+          Futures Markets
+        </h2>
+
+        <p className="mb-5 max-w-3xl text-red-100/65">
+          Season-long markets. Open each dropdown to pick tournament winner,
+          regular-season top of table, or regular-season bottom of table.
+        </p>
+
+        <div className="grid gap-4">
+          {futuresMarkets.map((market) => (
+            <FuturesMarketDropdown
+              key={market.id}
+              market={market}
+              session={session}
+              amount={futuresAmounts[market.id] || ""}
+              setAmount={(value) =>
+                setFuturesAmounts((current) => ({
+                  ...current,
+                  [market.id]: value,
+                }))
+              }
+              placeFuturesBet={placeFuturesBet}
+              placingFuturesKey={placingFuturesKey}
+            />
+          ))}
+
+          {futuresMarkets.length === 0 && (
+            <p className="rounded-2xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-5 text-red-100/60">
+              No futures markets are available yet. Make sure you ran the
+              futures SQL seed.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-3xl font-black text-[#F3EEE6]">
+          Game Markets
         </h2>
 
         <div className="grid gap-6">
@@ -523,5 +659,161 @@ export default function BettingClient() {
         </div>
       </section>
     </div>
+  );
+}
+
+function FuturesMarketDropdown({
+  market,
+  session,
+  amount,
+  setAmount,
+  placeFuturesBet,
+  placingFuturesKey,
+}: {
+  market: any;
+  session: any;
+  amount: string;
+  setAmount: (value: string) => void;
+  placeFuturesBet: (marketId: string, optionId: string) => void;
+  placingFuturesKey: string | null;
+}) {
+  const sortedOptions = [...(market.options || [])].sort((a, b) => {
+    const aOdds = Number(a.calculated?.odds || a.odds || 999);
+    const bOdds = Number(b.calculated?.odds || b.odds || 999);
+    return aOdds - bOdds;
+  });
+
+  const favorite = sortedOptions[0];
+
+  return (
+    <details className="group rounded-3xl border border-[#C4963E]/30 bg-[#1A0F08]/95 shadow-2xl shadow-black/30">
+      <summary className="cursor-pointer list-none p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#C4963E]">
+              Futures Market
+            </p>
+
+            <h3 className="mt-1 text-2xl font-black text-white">
+              {market.title}
+            </h3>
+
+            {market.description && (
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-red-100/65">
+                {market.description}
+              </p>
+            )}
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#F3EEE6]">
+                Market
+              </p>
+
+              <p className="mt-1 text-2xl font-black text-white">
+                {market.totalMarket || 0} 🦏
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#C4963E]/25 bg-black/25 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#F3EEE6]">
+                Bets
+              </p>
+
+              <p className="mt-1 text-2xl font-black text-white">
+                {market.totalBetCount || 0}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#C4963E]/25 bg-black/25 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#F3EEE6]">
+                Favorite
+              </p>
+
+              <p className="mt-1 truncate text-sm font-black text-white">
+                {favorite?.label || "None yet"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm font-black text-[#F3EEE6]">
+          <span className="group-open:hidden">Open market ▼</span>
+          <span className="hidden group-open:inline">Close market ▲</span>
+        </p>
+      </summary>
+
+      <div className="border-t border-[#C4963E]/20 p-5">
+        <label className="mb-5 grid gap-2">
+          <span className="text-sm font-bold text-red-100/70">
+            Rhino Coins to place in this market
+          </span>
+
+          <input
+            className="rounded-xl border border-[#C4963E]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
+            type="number"
+            min="1"
+            placeholder="Example: 10"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </label>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {sortedOptions.map((option: any) => {
+            const team = normalizeTeam(option.team);
+            const odds = Number(option.calculated?.odds || option.odds || 10);
+            const optionAmount = Number(option.calculated?.amount || 0);
+            const optionBetCount = Number(option.calculated?.betCount || 0);
+            const pollSignal = Number(option.calculated?.pollSignal || 0);
+            const historicalSignal = Number(
+              option.calculated?.historicalSignal || 0
+            );
+            const key = `${market.id}-${option.id}`;
+
+            return (
+              <div
+                key={option.id}
+                className="rounded-2xl border border-[#C4963E]/20 bg-black/25 p-4"
+              >
+                <div className="flex items-center gap-3">
+                  <TeamLogo
+                    logoUrl={team?.logo_url || null}
+                    teamName={option.label}
+                    league={team?.league || "competitive"}
+                    size="sm"
+                  />
+
+                  <div className="min-w-0">
+                    <p className="truncate font-black text-white">
+                      {option.label}
+                    </p>
+
+                    <p className="text-sm text-red-100/55">
+                      Odds: {odds.toFixed(2)}x · {optionAmount} 🦏 ·{" "}
+                      {optionBetCount} bets
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 text-xs text-red-100/55">
+                  <p>Poll signal: {pollSignal}</p>
+                  <p>Historical signal: {historicalSignal}</p>
+                </div>
+
+                <button
+                  disabled={!session || placingFuturesKey === key}
+                  onClick={() => placeFuturesBet(market.id, option.id)}
+                  className="mt-4 w-full rounded-xl bg-[#C4963E] px-4 py-3 font-black text-[#16070B] transition hover:bg-[#D7AA4A] disabled:opacity-50"
+                >
+                  Pick {option.label}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </details>
   );
 }

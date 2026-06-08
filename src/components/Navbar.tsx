@@ -11,7 +11,7 @@ const mainLinks = [
   { href: "/teams", label: "Teams" },
   { href: "/photos", label: "Photos" },
   { href: "/polls", label: "Polls" },
-  { href: "/donate", label: "Donate" },
+  { href: "/donate", label: "Support" },
 ];
 
 const rhinoCoinLinks = [

@@ -60,6 +60,13 @@ export default async function AdminPage() {
           </a>
 
           <a
+            href="/admin/scores"
+            className="rounded-full bg-[#C4963E] px-5 py-3 font-black text-[#16070B] transition hover:bg-[#D7AA4A]"
+          >
+            Score Control Center
+          </a>
+
+          <a
             href="/admin/import-teams"
             className="rounded-full bg-[#A51C30] px-5 py-3 font-black text-white transition hover:bg-[#7F1524]"
           >

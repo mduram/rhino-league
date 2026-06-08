@@ -20,6 +20,9 @@ type Game = {
   status: string;
   league: string;
   weight: number | null;
+  is_forfeit?: boolean | null;
+  forfeit_team_id?: string | null;
+  forfeit_note?: string | null;
 };
 
 function getResultPoints({
@@ -53,7 +56,18 @@ export default async function StandingsPage() {
 
   const { data: games, error: gamesError } = await supabase
     .from("games")
-    .select("*")
+    .select(`
+      home_team_id,
+      away_team_id,
+      home_score,
+      away_score,
+      status,
+      league,
+      weight,
+      is_forfeit,
+      forfeit_team_id,
+      forfeit_note
+    `)
     .eq("status", "completed");
 
   if (teamsError || gamesError) {
@@ -70,6 +84,7 @@ export default async function StandingsPage() {
     let wins = 0;
     let losses = 0;
     let gamesPlayed = 0;
+    let forfeits = 0;
     let pointsFor = 0;
     let pointsAgainst = 0;
     let standingPoints = 0;
@@ -90,15 +105,21 @@ export default async function StandingsPage() {
 
       const didWin = teamScore > opponentScore;
       const didLose = teamScore < opponentScore;
+      const didForfeit = Boolean(game.is_forfeit && game.forfeit_team_id === team.id);
 
       if (didWin) wins += 1;
       if (didLose) losses += 1;
 
-      standingPoints += getResultPoints({
-        league: game.league,
-        didWin,
-        didLose,
-      });
+      if (didForfeit) {
+        forfeits += 1;
+        standingPoints -= 3;
+      } else {
+        standingPoints += getResultPoints({
+          league: game.league,
+          didWin,
+          didLose,
+        });
+      }
     });
 
     return {
@@ -108,6 +129,7 @@ export default async function StandingsPage() {
       gamesPlayed,
       wins,
       losses,
+      forfeits,
       pointsFor,
       pointsAgainst,
       differential: pointsFor - pointsAgainst,
@@ -142,11 +164,14 @@ export default async function StandingsPage() {
           <p>Competitive loss = -1 point</p>
           <p>Recreational win = +1 point</p>
           <p>Recreational loss = -2 points</p>
+          <p className="font-black text-red-200">
+            Forfeit = -3 total points for forfeiting team
+          </p>
         </div>
       </div>
 
       <div className="overflow-x-auto rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 shadow-2xl shadow-black/30">
-        <table className="w-full min-w-[850px] border-collapse">
+        <table className="w-full min-w-[900px] border-collapse">
           <thead className="bg-[#A51C30]/20 text-left">
             <tr>
               <th className="p-4">Rank</th>
@@ -155,6 +180,7 @@ export default async function StandingsPage() {
               <th className="p-4">GP</th>
               <th className="p-4">W</th>
               <th className="p-4">L</th>
+              <th className="p-4">F</th>
               <th className="p-4">Seeding Pts</th>
               <th className="p-4">PF</th>
               <th className="p-4">PA</th>
@@ -184,6 +210,16 @@ export default async function StandingsPage() {
                 <td className="p-4">{team.wins}</td>
                 <td className="p-4">{team.losses}</td>
 
+                <td className="p-4">
+                  {team.forfeits > 0 ? (
+                    <span className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 font-black text-red-200">
+                      {team.forfeits}
+                    </span>
+                  ) : (
+                    0
+                  )}
+                </td>
+
                 <td className="p-4 font-black text-[#F3EEE6]">
                   {team.standingPoints}
                 </td>
@@ -199,6 +235,7 @@ export default async function StandingsPage() {
 
       <p className="mt-4 text-sm text-red-100/50">
         Current ranking: seeding points, then wins, then score differential.
+        A forfeit is exactly -3 total points for the forfeiting team.
       </p>
     </PageShell>
   );

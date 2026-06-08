@@ -4,15 +4,27 @@ import { isValidAdminToken } from "@/lib/adminAuth";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { adminToken, submissionId } = body;
+
+  const {
+    adminToken,
+    submissionId,
+    overrideHomeScore,
+    overrideAwayScore,
+    overrideIsForfeit,
+    overrideForfeitTeamId,
+    overrideForfeitNote,
+  } = body;
 
   if (!isValidAdminToken(adminToken)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized. Please log in again." },
+      { status: 401 }
+    );
   }
 
   if (!submissionId) {
     return NextResponse.json(
-      { error: "Submission ID is required" },
+      { error: "Missing submission ID." },
       { status: 400 }
     );
   }
@@ -21,7 +33,7 @@ export async function POST(request: Request) {
     .from("score_submissions")
     .select("*")
     .eq("id", submissionId)
-    .single();
+    .maybeSingle();
 
   if (submissionError) {
     return NextResponse.json(
@@ -30,31 +42,138 @@ export async function POST(request: Request) {
     );
   }
 
-  const { error: gameError } = await supabaseAdmin
+  if (!submission) {
+    return NextResponse.json(
+      { error: "Submission not found." },
+      { status: 404 }
+    );
+  }
+
+  const { data: game, error: gameError } = await supabaseAdmin
     .from("games")
-    .update({
-      home_score: submission.home_score,
-      away_score: submission.away_score,
-      status: "completed",
-      submitted_score_pending: false,
-    })
-    .eq("id", submission.game_id);
+    .select("id, home_team_id, away_team_id")
+    .eq("id", submission.game_id)
+    .maybeSingle();
 
   if (gameError) {
     return NextResponse.json({ error: gameError.message }, { status: 500 });
   }
 
-  const { error: updateSubmissionError } = await supabaseAdmin
-    .from("score_submissions")
-    .update({ status: "approved" })
-    .eq("id", submissionId);
+  if (!game) {
+    return NextResponse.json({ error: "Game not found." }, { status: 404 });
+  }
 
-  if (updateSubmissionError) {
+  const finalHomeScore =
+    overrideHomeScore === undefined ||
+    overrideHomeScore === null ||
+    overrideHomeScore === ""
+      ? Number(submission.home_score)
+      : Number(overrideHomeScore);
+
+  const finalAwayScore =
+    overrideAwayScore === undefined ||
+    overrideAwayScore === null ||
+    overrideAwayScore === ""
+      ? Number(submission.away_score)
+      : Number(overrideAwayScore);
+
+  if (
+    !Number.isFinite(finalHomeScore) ||
+    !Number.isFinite(finalAwayScore) ||
+    finalHomeScore < 0 ||
+    finalAwayScore < 0
+  ) {
     return NextResponse.json(
-      { error: updateSubmissionError.message },
+      { error: "Scores must be valid non-negative numbers." },
+      { status: 400 }
+    );
+  }
+
+  const finalIsForfeit =
+    overrideIsForfeit === undefined || overrideIsForfeit === null
+      ? Boolean(submission.is_forfeit)
+      : Boolean(overrideIsForfeit);
+
+  const finalForfeitTeamId =
+    overrideForfeitTeamId === undefined
+      ? submission.forfeit_team_id
+      : overrideForfeitTeamId || null;
+
+  if (finalIsForfeit) {
+    if (!finalForfeitTeamId) {
+      return NextResponse.json(
+        { error: "Select which team forfeited." },
+        { status: 400 }
+      );
+    }
+
+    const validForfeitTeam =
+      finalForfeitTeamId === game.home_team_id ||
+      finalForfeitTeamId === game.away_team_id;
+
+    if (!validForfeitTeam) {
+      return NextResponse.json(
+        { error: "Forfeit team must be one of the teams in the game." },
+        { status: 400 }
+      );
+    }
+  }
+
+  const finalForfeitNote =
+    overrideForfeitNote === undefined
+      ? submission.forfeit_note
+      : String(overrideForfeitNote || "").trim() || null;
+
+  const { error: gameUpdateError } = await supabaseAdmin
+    .from("games")
+    .update({
+      home_score: finalHomeScore,
+      away_score: finalAwayScore,
+      status: "completed",
+      submitted_score_pending: false,
+      is_forfeit: finalIsForfeit,
+      forfeit_team_id: finalIsForfeit ? finalForfeitTeamId : null,
+      forfeit_note: finalIsForfeit ? finalForfeitNote : null,
+    })
+    .eq("id", submission.game_id);
+
+  if (gameUpdateError) {
+    return NextResponse.json(
+      { error: gameUpdateError.message },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ success: true });
+  const { error: submissionUpdateError } = await supabaseAdmin
+    .from("score_submissions")
+    .update({
+      status: "approved",
+      home_score: finalHomeScore,
+      away_score: finalAwayScore,
+      is_forfeit: finalIsForfeit,
+      forfeit_team_id: finalIsForfeit ? finalForfeitTeamId : null,
+      forfeit_note: finalIsForfeit ? finalForfeitNote : null,
+    })
+    .eq("id", submissionId);
+
+  if (submissionUpdateError) {
+    return NextResponse.json(
+      { error: submissionUpdateError.message },
+      { status: 500 }
+    );
+  }
+
+  await supabaseAdmin
+    .from("score_submissions")
+    .update({ status: "rejected" })
+    .eq("game_id", submission.game_id)
+    .neq("id", submissionId)
+    .eq("status", "pending");
+
+  return NextResponse.json({
+    success: true,
+    message: finalIsForfeit
+      ? "Submission approved as a forfeit."
+      : "Submission approved.",
+  });
 }

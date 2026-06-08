@@ -4,7 +4,7 @@ import PageShell from "@/components/PageShell";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const donationUrl = process.env.NEXT_PUBLIC_DONATION_URL || "";
+const supportUrl = process.env.NEXT_PUBLIC_DONATION_URL || "";
 
 
 
@@ -20,7 +20,7 @@ export default function DonatePage() {
             <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
               <div>
                 <p className="mb-3 text-sm font-black uppercase tracking-[0.25em] text-[#C4963E]">
-                  Donations
+                  Support
                 </p>
 
                 <h2 className="text-4xl font-black text-white sm:text-5xl">
@@ -28,30 +28,30 @@ export default function DonatePage() {
                 </h2>
 
                 <p className="mt-5 text-lg leading-8 text-red-100/75">
-                  If you enjoy the Rhino League, consider donating to help with
+                  If you enjoy the Rhino League, consider supporting the league to help with
                   website hosting costs, ordering supplies for the court, and
                   food/drinks for the commissioner.
                 </p>
 
                 <p className="mt-4 rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-4 text-sm leading-6 text-[#F3EEE6]">
-                  Donations are optional and do not affect standings, schedules,
+                  Support is completely optional and does not affect standings, schedules,
                   eligibility, betting, Rhino Coin balances, or playoff seeding.
                   This is just a way to support the league.
                 </p>
 
                 <div className="mt-7 flex flex-wrap gap-4">
-                  {donationUrl ? (
+                  {supportUrl ? (
                     <a
-                      href={donationUrl}
+                      href={supportUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="rounded-full bg-[#C4963E] px-7 py-4 font-black text-[#16070B] shadow-lg shadow-[#C4963E]/25 transition hover:bg-[#D7AA4A]"
                     >
-                      Donate securely
+                      Support the league
                     </a>
                   ) : (
                     <div className="rounded-2xl border border-red-500/25 bg-red-500/10 p-4 text-red-200">
-                      Donation link is not configured yet. Add{" "}
+                      Support link is not configured yet. Add{" "}
                       <code className="rounded bg-black/30 px-2 py-1">
                         NEXT_PUBLIC_DONATION_URL
                       </code>{" "}
@@ -70,7 +70,7 @@ export default function DonatePage() {
 
               <div className="rounded-[2rem] border border-[#C4963E]/25 bg-black/25 p-6">
                 <p className="mb-4 text-sm font-black uppercase tracking-[0.22em] text-[#F3EEE6]">
-                  What donations help with
+                  What support helps with
                 </p>
 
                 <div className="grid gap-3">
