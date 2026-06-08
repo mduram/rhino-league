@@ -42,6 +42,11 @@ function slotKeyFromScheduledAt(scheduledAt: string) {
   return `${dateToInputDate(date)}_${dateToInputTime(date)}`;
 }
 
+function readAdminToken() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("rhino_admin_token") || "";
+}
+
 export default function SchedulerClient({
   teams,
   games,
@@ -50,25 +55,25 @@ export default function SchedulerClient({
   games: any[];
 }) {
   const [adminToken, setAdminToken] = useState("");
+  const [gameList, setGameList] = useState<any[]>(games || []);
   const [selectedLeague, setSelectedLeague] = useState<League>("competitive");
   const [gamesPerTeam, setGamesPerTeam] = useState("4");
   const [poolGroup, setPoolGroup] = useState("");
   const [message, setMessage] = useState("");
-
   const [startDate, setStartDate] = useState(dateToInputDate(new Date()));
   const [numberOfDays, setNumberOfDays] = useState("7");
   const [timeSlots, setTimeSlots] = useState("18:00,19:00,20:00");
   const [location, setLocation] = useState("Court 1");
-
   const [fallbackGameId, setFallbackGameId] = useState("");
   const [fallbackSlotId, setFallbackSlotId] = useState("");
+  const [busyGameId, setBusyGameId] = useState<string | null>(null);
 
   useEffect(() => {
-    setAdminToken(localStorage.getItem("rhino_admin_token") || "");
+    setAdminToken(readAdminToken());
   }, []);
 
   const filteredTeams = teams.filter((team) => team.league === selectedLeague);
-  const filteredGames = games.filter((game) => game.league === selectedLeague);
+  const filteredGames = gameList.filter((game) => game.league === selectedLeague);
 
   const unscheduledGames = filteredGames.filter(
     (game) => game.status === "unscheduled"
@@ -136,6 +141,7 @@ export default function SchedulerClient({
 
   async function generateGamePool(e: React.FormEvent) {
     e.preventDefault();
+
     setMessage("");
 
     if (!adminToken) {
@@ -159,9 +165,7 @@ export default function SchedulerClient({
     const data = await res.json();
 
     if (!res.ok) {
-      setMessage(
-        data.error || `Could not generate game pool. Status: ${res.status}`
-      );
+      setMessage(data.error || `Could not generate game pool. Status: ${res.status}`);
       return;
     }
 
@@ -187,6 +191,8 @@ export default function SchedulerClient({
       return;
     }
 
+    setBusyGameId(gameId);
+
     const res = await fetch("/api/admin/schedule-game", {
       method: "POST",
       headers: {
@@ -205,11 +211,28 @@ export default function SchedulerClient({
 
     if (!res.ok) {
       setMessage(data.error || `Could not schedule game. Status: ${res.status}`);
+      setBusyGameId(null);
       return;
     }
 
-    setMessage("Game scheduled. Refreshing...");
-    window.location.reload();
+    setGameList((current) =>
+      current.map((game) =>
+        game.id === gameId
+          ? {
+              ...game,
+              scheduled_at: scheduledAt,
+              location,
+              court: location,
+              status: "scheduled",
+            }
+          : game
+      )
+    );
+
+    setFallbackGameId("");
+    setFallbackSlotId("");
+    setMessage("Game scheduled.");
+    setBusyGameId(null);
   }
 
   async function unscheduleGame(gameId: string) {
@@ -226,6 +249,8 @@ export default function SchedulerClient({
 
     if (!confirmUnschedule) return;
 
+    setBusyGameId(gameId);
+
     const res = await fetch("/api/admin/unschedule-game", {
       method: "POST",
       headers: {
@@ -240,14 +265,27 @@ export default function SchedulerClient({
     const data = await res.json();
 
     if (!res.ok) {
-      setMessage(
-        data.error || `Could not unschedule game. Status: ${res.status}`
-      );
+      setMessage(data.error || `Could not unschedule game. Status: ${res.status}`);
+      setBusyGameId(null);
       return;
     }
 
-    setMessage("Game moved back to pool. Refreshing...");
-    window.location.reload();
+    setGameList((current) =>
+      current.map((game) =>
+        game.id === gameId
+          ? {
+              ...game,
+              scheduled_at: null,
+              location: null,
+              court: null,
+              status: "unscheduled",
+            }
+          : game
+      )
+    );
+
+    setMessage("Game moved back to pool.");
+    setBusyGameId(null);
   }
 
   function onDragStart(e: React.DragEvent, gameId: string) {
@@ -289,369 +327,341 @@ export default function SchedulerClient({
   }
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[380px_1fr]">
-      <aside className="space-y-6">
-        <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <h2 className="mb-4 text-2xl font-black text-white">Admin Mode</h2>
+    <div className="grid gap-8">
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-2xl font-black">Admin Mode</h2>
 
-          {adminToken ? (
-            <p className="text-green-300">Admin mode active.</p>
-          ) : (
-            <p className="text-orange-300">
-              Not logged in. Go to /admin/login first.
-            </p>
-          )}
-
-          {message && (
-            <p className="mt-4 rounded-xl border border-orange-500/20 bg-orange-500/10 p-3 text-sm text-orange-300">
-              {message}
-            </p>
-          )}
-        </section>
-
-        <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <h2 className="mb-4 text-2xl font-black text-white">League</h2>
-
-          <select
-            className="mb-3 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
-            value={selectedLeague}
-            onChange={(e) => setSelectedLeague(e.target.value as League)}
-          >
-            <option value="competitive">Competitive</option>
-            <option value="recreational">Recreational</option>
-          </select>
-
-          <LeagueBadge league={selectedLeague} />
-        </section>
-
-        <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <h2 className="mb-4 text-2xl font-black text-white">
-            Balanced Generator
-          </h2>
-
-          <form onSubmit={generateGamePool} className="grid gap-4">
-            <label className="grid gap-2">
-              <span className="text-sm font-bold text-neutral-300">
-                Games per team
-              </span>
-              <input
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
-                type="number"
-                min="1"
-                max="30"
-                value={gamesPerTeam}
-                onChange={(e) => setGamesPerTeam(e.target.value)}
-              />
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-sm font-bold text-neutral-300">
-                Pool label, optional
-              </span>
-              <input
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-neutral-500"
-                placeholder="e.g. Week 1 Pool"
-                value={poolGroup}
-                onChange={(e) => setPoolGroup(e.target.value)}
-              />
-            </label>
-
-            <button className="rounded-xl bg-orange-500 px-4 py-3 font-black text-white hover:bg-orange-600">
-              Generate Balanced Pool
-            </button>
-          </form>
-
-          <p className="mt-4 text-sm text-neutral-500">
-            Example: 22 recreational teams × 4 games each creates about 44 games.
+        {adminToken ? (
+          <p className="mt-2 text-green-300">Admin mode active.</p>
+        ) : (
+          <p className="mt-2 text-red-300">
+            Not logged in. Go to /admin/login first.
           </p>
-        </section>
+        )}
 
-        <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <h2 className="mb-4 text-2xl font-black text-white">
-            Calendar Settings
-          </h2>
+        {message && (
+          <p className="mt-4 rounded-xl border border-[#A51C30]/25 bg-[#A51C30]/15 p-4 text-red-100">
+            {message}
+          </p>
+        )}
+      </section>
 
-          <div className="grid gap-4">
-            <label className="grid gap-2">
-              <span className="text-sm font-bold text-neutral-300">
-                Start date
-              </span>
-              <input
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </label>
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-2xl font-black">League</h2>
 
-            <label className="grid gap-2">
-              <span className="text-sm font-bold text-neutral-300">
-                Number of days
-              </span>
-              <input
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
-                type="number"
-                min="1"
-                max="30"
-                value={numberOfDays}
-                onChange={(e) => setNumberOfDays(e.target.value)}
-              />
-            </label>
+        <select
+          className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+          value={selectedLeague}
+          onChange={(e) => setSelectedLeague(e.target.value as League)}
+        >
+          <option value="competitive">Competitive</option>
+          <option value="recreational">Recreational</option>
+        </select>
+      </section>
 
-            <label className="grid gap-2">
-              <span className="text-sm font-bold text-neutral-300">
-                Time slots, comma-separated
-              </span>
-              <input
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-neutral-500"
-                placeholder="18:00,19:00,20:00"
-                value={timeSlots}
-                onChange={(e) => setTimeSlots(e.target.value)}
-              />
-            </label>
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-2xl font-black">Balanced Generator</h2>
 
-            <label className="grid gap-2">
-              <span className="text-sm font-bold text-neutral-300">
-                Location / court
-              </span>
-              <input
-                className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white placeholder:text-neutral-500"
-                placeholder="Court 1"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-              />
-            </label>
-          </div>
-        </section>
+        <form onSubmit={generateGamePool} className="mt-5 grid gap-4">
+          <label className="grid gap-2">
+            <span className="text-sm font-bold text-red-100/70">
+              Games per team
+            </span>
+            <input
+              className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+              value={gamesPerTeam}
+              onChange={(e) => setGamesPerTeam(e.target.value)}
+            />
+          </label>
 
-        <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <h2 className="mb-4 text-2xl font-black text-white">Balance</h2>
+          <label className="grid gap-2">
+            <span className="text-sm font-bold text-red-100/70">
+              Pool label, optional
+            </span>
+            <input
+              className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+              value={poolGroup}
+              onChange={(e) => setPoolGroup(e.target.value)}
+            />
+          </label>
 
-          <div className="grid gap-2">
-            {teamBalance.map((team) => (
+          <button
+            type="submit"
+            className="rounded-xl bg-[#A51C30] px-5 py-3 font-black text-white"
+          >
+            Generate Balanced Pool
+          </button>
+        </form>
+
+        <p className="mt-3 text-sm text-red-100/50">
+          Example: 22 recreational teams × 4 games each creates about 44 games.
+        </p>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-2xl font-black">Calendar Settings</h2>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-4">
+          <label className="grid gap-2">
+            <span className="text-sm font-bold text-red-100/70">
+              Start date
+            </span>
+            <input
+              type="date"
+              className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </label>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-bold text-red-100/70">
+              Number of days
+            </span>
+            <input
+              className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+              value={numberOfDays}
+              onChange={(e) => setNumberOfDays(e.target.value)}
+            />
+          </label>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-bold text-red-100/70">
+              Time slots, comma-separated
+            </span>
+            <input
+              className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+              value={timeSlots}
+              onChange={(e) => setTimeSlots(e.target.value)}
+            />
+          </label>
+
+          <label className="grid gap-2">
+            <span className="text-sm font-bold text-red-100/70">
+              Location / court
+            </span>
+            <input
+              className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-2xl font-black">Balance</h2>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {teamBalance.map((team) => (
+            <div
+              key={team.id}
+              className="rounded-2xl border border-white/10 bg-black/20 p-4"
+            >
+              <p className="font-black">{team.name}</p>
+              <p className="mt-1 text-sm text-red-100/60">
+                Scheduled: {team.scheduledCount} · In pool:{" "}
+                {team.unscheduledCount}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-2xl font-black">Drag Game Pool</h2>
+
+        {unscheduledGames.length === 0 ? (
+          <p className="mt-4 text-red-100/60">
+            No unscheduled games in this pool.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {unscheduledGames.map((game) => (
               <div
-                key={team.id}
-                className="rounded-xl border border-white/10 bg-black/20 p-3"
+                key={game.id}
+                draggable
+                onDragStart={(e) => onDragStart(e, game.id)}
+                className={`cursor-grab rounded-2xl border p-4 active:cursor-grabbing ${
+                  game.league === "competitive"
+                    ? "border-cyan-400/20 bg-cyan-500/10"
+                    : "border-orange-400/20 bg-orange-500/10"
+                }`}
               >
-                <p className="font-black text-white">{team.name}</p>
-                <p className="text-sm text-neutral-400">
-                  Scheduled: {team.scheduledCount} · In pool:{" "}
-                  {team.unscheduledCount}
+                <p className="font-black">
+                  {game.home_team?.name} vs {game.away_team?.name}
                 </p>
+
+                <p className="mt-1 text-sm text-red-100/60">
+                  {game.pool_group || game.round_label || "Unscheduled"}
+                </p>
+
+                {game.league && (
+                  <div className="mt-2">
+                    <LeagueBadge league={game.league} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
-        </section>
-      </aside>
+        )}
+      </section>
 
-      <section className="space-y-8">
-        <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl font-black text-white">Drag Game Pool</h2>
-            <LeagueBadge league={selectedLeague} />
-          </div>
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-2xl font-black">Manual Schedule Fallback</h2>
 
-          {unscheduledGames.length === 0 ? (
-            <p className="text-neutral-400">
-              No unscheduled games in this pool.
-            </p>
-          ) : (
-            <div className="grid max-h-[360px] gap-3 overflow-y-auto pr-2">
-              {unscheduledGames.map((game) => (
-                <div
-                  key={game.id}
-                  draggable
-                  onDragStart={(e) => onDragStart(e, game.id)}
-                  className={`cursor-grab rounded-2xl border p-4 active:cursor-grabbing ${
-                    game.league === "competitive"
-                      ? "border-cyan-400/20 bg-cyan-500/10"
-                      : "border-orange-400/20 bg-orange-500/10"
-                  }`}
-                >
-                  <p className="font-black text-white">
-                    {game.home_team?.name} vs {game.away_team?.name}
-                  </p>
+        <p className="mt-2 text-red-100/60">
+          If drag/drop is annoying in your browser, use this. It schedules the
+          exact same way.
+        </p>
 
-                  <p className="text-sm text-neutral-400">
-                    {game.pool_group || game.round_label || "Unscheduled"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <form onSubmit={scheduleFallback} className="mt-5 grid gap-4 md:grid-cols-3">
+          <select
+            className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+            value={fallbackGameId}
+            onChange={(e) => setFallbackGameId(e.target.value)}
+          >
+            <option value="">Select game</option>
+            {unscheduledGames.map((game) => (
+              <option key={game.id} value={game.id}>
+                {game.home_team?.name} vs {game.away_team?.name}
+              </option>
+            ))}
+          </select>
 
-        <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <h2 className="mb-4 text-2xl font-black text-white">
-            Manual Schedule Fallback
-          </h2>
+          <select
+            className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white"
+            value={fallbackSlotId}
+            onChange={(e) => setFallbackSlotId(e.target.value)}
+          >
+            <option value="">Select slot</option>
+            {calendarSlots.map((slot) => (
+              <option key={slot.id} value={slot.id}>
+                {new Date(`${slot.date}T00:00:00`).toLocaleDateString()} ·{" "}
+                {slot.time}
+              </option>
+            ))}
+          </select>
 
-          <p className="mb-4 text-sm text-neutral-400">
-            If drag/drop is annoying in your browser, use this. It schedules the
-            exact same way.
-          </p>
+          <button
+            type="submit"
+            className="rounded-xl bg-[#A51C30] px-5 py-3 font-black text-white disabled:opacity-50"
+            disabled={!fallbackGameId || !fallbackSlotId || Boolean(busyGameId)}
+          >
+            Schedule
+          </button>
+        </form>
+      </section>
 
-          <form onSubmit={scheduleFallback} className="grid gap-4 md:grid-cols-3">
-            <select
-              className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white md:col-span-1"
-              value={fallbackGameId}
-              onChange={(e) => setFallbackGameId(e.target.value)}
-            >
-              <option value="">Select game</option>
-              {unscheduledGames.map((game) => (
-                <option key={game.id} value={game.id}>
-                  {game.home_team?.name} vs {game.away_team?.name}
-                </option>
-              ))}
-            </select>
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-2xl font-black">Calendar Slots</h2>
 
-            <select
-              className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white md:col-span-1"
-              value={fallbackSlotId}
-              onChange={(e) => setFallbackSlotId(e.target.value)}
-            >
-              <option value="">Select slot</option>
-              {calendarSlots.map((slot) => (
-                <option key={slot.id} value={slot.id}>
-                  {new Date(`${slot.date}T00:00:00`).toLocaleDateString()} ·{" "}
-                  {slot.time}
-                </option>
-              ))}
-            </select>
+        <p className="mt-2 text-red-100/60">
+          Drag a game from the pool into a slot.
+        </p>
 
-            <button className="rounded-xl bg-orange-500 px-5 py-3 font-black text-white hover:bg-orange-600 md:col-span-1">
-              Schedule
-            </button>
-          </form>
-        </section>
+        <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {calendarSlots.map((slot) => {
+            const slotGames = gamesInSlot(slot);
 
-        <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <h2 className="mb-4 text-2xl font-black text-white">
-            Calendar Slots
-          </h2>
+            return (
+              <div
+                key={slot.id}
+                onDragOver={onDragOver}
+                onDrop={(e) => onDrop(e, slot.scheduledAt)}
+                className="min-h-40 rounded-2xl border border-dashed border-white/20 bg-black/20 p-4"
+              >
+                <p className="font-black">
+                  {new Date(`${slot.date}T00:00:00`).toLocaleDateString()}
+                </p>
 
-          <p className="mb-4 text-sm text-neutral-400">
-            Drag a game from the pool into a slot.
-          </p>
+                <p className="mt-1 text-sm text-red-100/60">
+                  {slot.time} · {location}
+                </p>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {calendarSlots.map((slot) => {
-              const slotGames = gamesInSlot(slot);
-
-              return (
-                <div
-                  key={slot.id}
-                  onDragOver={onDragOver}
-                  onDrop={(e) => onDrop(e, slot.scheduledAt)}
-                  className="min-h-40 rounded-2xl border border-dashed border-white/20 bg-black/20 p-4"
-                >
-                  <p className="font-black text-white">
-                    {new Date(`${slot.date}T00:00:00`).toLocaleDateString()}
-                  </p>
-
-                  <p className="mb-3 text-sm text-orange-300">
-                    {slot.time} · {location}
-                  </p>
-
-                  <div className="grid gap-2">
-                    {slotGames.map((game) => (
-                      <div
-                        key={game.id}
-                        className={`rounded-xl border p-3 ${
-                          game.league === "competitive"
-                            ? "border-cyan-400/20 bg-cyan-500/10"
-                            : "border-orange-400/20 bg-orange-500/10"
-                        }`}
-                      >
-                        <p className="font-black text-white">
-                          {game.home_team?.name} vs {game.away_team?.name}
-                        </p>
-
-                        <div className="mt-2">
-                          <LeagueBadge league={game.league} />
-                        </div>
-
-                        <button
-                          onClick={() => unscheduleGame(game.id)}
-                          className="mt-3 rounded-lg border border-white/10 px-3 py-1 text-xs font-black text-neutral-300 hover:bg-white/10"
-                        >
-                          Move back to pool
-                        </button>
-                      </div>
-                    ))}
-
-                    {slotGames.length === 0 && (
-                      <p className="text-sm text-neutral-500">
-                        Drop game here
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-white/10 bg-neutral-900/80 p-5 shadow-2xl shadow-black/30">
-          <h2 className="mb-4 text-2xl font-black text-white">
-            All Scheduled Games
-          </h2>
-
-          <p className="mb-4 text-sm text-neutral-400">
-            This shows every scheduled game in the selected league, even if it is
-            outside the calendar range above. Use this to unschedule anything.
-          </p>
-
-          {scheduledGames.length === 0 ? (
-            <p className="text-neutral-400">
-              No scheduled games for this league.
-            </p>
-          ) : (
-            <div className="grid gap-3">
-              {scheduledGames.map((game) => (
-                <div
-                  key={game.id}
-                  className={`rounded-2xl border p-4 ${
-                    game.league === "competitive"
-                      ? "border-cyan-400/20 bg-cyan-500/10"
-                      : "border-orange-400/20 bg-orange-500/10"
-                  }`}
-                >
-                  <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-                    <div>
-                      <p className="font-black text-white">
+                <div className="mt-4 grid gap-3">
+                  {slotGames.map((game) => (
+                    <div
+                      key={game.id}
+                      className="rounded-xl border border-white/10 bg-white/10 p-3"
+                    >
+                      <p className="font-black">
                         {game.home_team?.name} vs {game.away_team?.name}
                       </p>
 
-                      <p className="text-sm text-neutral-400">
-                        {game.scheduled_at
-                          ? new Date(game.scheduled_at).toLocaleString()
-                          : "No date"}
-                        {game.location ? ` · ${game.location}` : ""}
-                      </p>
-
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <LeagueBadge league={game.league} />
-                        {game.pool_group && (
-                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-neutral-300">
-                            {game.pool_group}
-                          </span>
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        disabled={busyGameId === game.id}
+                        onClick={() => unscheduleGame(game.id)}
+                        className="mt-3 rounded-lg border border-white/10 px-3 py-1 text-xs font-black text-neutral-300 hover:bg-white/10 disabled:opacity-50"
+                      >
+                        {busyGameId === game.id ? "Moving..." : "Move back to pool"}
+                      </button>
                     </div>
+                  ))}
 
-                    <button
-                      onClick={() => unscheduleGame(game.id)}
-                      className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-black text-red-300 hover:bg-red-500/20"
-                    >
-                      Move back to pool
-                    </button>
-                  </div>
+                  {slotGames.length === 0 && (
+                    <p className="text-sm text-red-100/40">Drop game here</p>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <h2 className="text-2xl font-black">All Scheduled Games</h2>
+
+        <p className="mt-2 text-red-100/60">
+          This shows every scheduled game in the selected league, even if it is
+          outside the calendar range above. Use this to unschedule anything.
+        </p>
+
+        {scheduledGames.length === 0 ? (
+          <p className="mt-4 text-red-100/60">
+            No scheduled games for this league.
+          </p>
+        ) : (
+          <div className="mt-5 grid gap-3">
+            {scheduledGames.map((game) => (
+              <div
+                key={game.id}
+                className="rounded-2xl border border-white/10 bg-black/20 p-4"
+              >
+                <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                  <div>
+                    <p className="font-black">
+                      {game.home_team?.name} vs {game.away_team?.name}
+                    </p>
+
+                    <p className="mt-1 text-sm text-red-100/60">
+                      {game.scheduled_at
+                        ? new Date(game.scheduled_at).toLocaleString()
+                        : "No date"}
+                      {game.location ? ` · ${game.location}` : ""}
+                    </p>
+
+                    {game.pool_group && (
+                      <p className="mt-1 text-xs text-red-100/40">
+                        {game.pool_group}
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={busyGameId === game.id}
+                    onClick={() => unscheduleGame(game.id)}
+                    className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-black text-red-300 hover:bg-red-500/20 disabled:opacity-50"
+                  >
+                    {busyGameId === game.id ? "Moving..." : "Move back to pool"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
