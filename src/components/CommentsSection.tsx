@@ -38,11 +38,9 @@ export default function CommentsSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetType, targetId]);
 
-  function toggleOpen() {
-    setIsOpen((current) => !current);
-  }
-
   async function loadComments() {
+    if (!targetId) return;
+
     setIsLoading(true);
     setMessage("");
 
@@ -107,6 +105,7 @@ export default function CommentsSection({
     setMessage("Comment posted.");
     setIsPosting(false);
     setHasLoadedOnce(true);
+    setIsOpen(true);
   }
 
   async function voteComment(commentId: string, voteValue: 1 | -1) {
@@ -144,9 +143,10 @@ export default function CommentsSection({
         )
         .sort((a, b) => {
           if (b.score !== a.score) return b.score - a.score;
+
           return (
-            new Date(a.created_at).getTime() -
-            new Date(b.created_at).getTime()
+            new Date(b.created_at).getTime() -
+            new Date(a.created_at).getTime()
           );
         })
     );
@@ -155,21 +155,18 @@ export default function CommentsSection({
   }
 
   return (
-    <section className="mt-5 rounded-2xl border border-[#A51C30]/25 bg-black/20">
+    <section className="mt-5 rounded-2xl border border-[#A51C30]/25 bg-black/20 p-4">
       <button
         type="button"
-        onClick={toggleOpen}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left transition hover:bg-white/[0.04]"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex w-full items-center justify-between gap-4 text-left"
       >
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-black text-white">
-            💬 {title}{" "}
-            <span className="text-[#F3EEE6]">
-              ({hasLoadedOnce ? comments.length : "..."})
-            </span>
+        <div>
+          <p className="font-black text-white">
+            {title} ({hasLoadedOnce ? comments.length : "..."})
           </p>
 
-          <p className="mt-1 truncate text-sm text-red-100/50">
+          <p className="mt-1 text-sm text-red-100/55">
             {isLoading
               ? "Loading comments..."
               : comments.length === 0
@@ -178,25 +175,24 @@ export default function CommentsSection({
           </p>
         </div>
 
-        <span className="flex shrink-0 items-center gap-1 rounded-full border border-[#A51C30]/30 bg-[#A51C30]/15 px-3 py-1 text-sm font-black text-red-100">
-          <span>{isOpen ? "Hide" : "Show"}</span>
-          <span>{isOpen ? "▲" : "▼"}</span>
+        <span className="shrink-0 rounded-full border border-[#C4963E]/25 bg-[#C4963E]/10 px-4 py-2 text-sm font-black text-[#F3EEE6]">
+          {isOpen ? "Hide ▲" : "Show ▼"}
         </span>
       </button>
 
       {isOpen && (
-        <div className="border-t border-[#A51C30]/20 p-4">
+        <div className="mt-5 border-t border-[#A51C30]/20 pt-5">
           <form onSubmit={postComment} className="grid gap-3">
             <input
               className="rounded-xl border border-[#A51C30]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
-              placeholder="Name, nickname, team name... optional"
+              placeholder="Name, or leave blank for Anonymous Rhino"
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
             />
 
             <textarea
               className="min-h-24 rounded-xl border border-[#A51C30]/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
-              placeholder="Say something nice, funny, or mildly spicy..."
+              placeholder="Write a comment..."
               value={commentBody}
               onChange={(e) => setCommentBody(e.target.value)}
             />
