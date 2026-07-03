@@ -259,7 +259,49 @@ export default async function HomePage() {
                   winners, and climb the leaderboard.
                 </p>
               </Link>
+              <Link
 
+  href="/betting"
+
+  className="group relative block overflow-hidden rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-5 transition hover:bg-emerald-500/20"
+
+>
+
+  <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-emerald-400/15 blur-3xl" />
+
+  <div className="relative">
+
+    <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-200">
+
+      New ⚽
+
+    </p>
+
+    <p className="mt-2 text-xl font-black text-white">
+
+      World Cup betting is live!!!
+
+    </p>
+
+    <p className="mt-2 text-base leading-7 text-red-100/75">
+
+      Use your Rhino Coins to bet on FIFA World Cup games with
+
+      real bookmaker-derived odds. Pick the winner or the draw,
+
+      lock in your price, and climb the Rhino leaderboard.
+
+    </p>
+
+    <div className="mt-4 inline-flex rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-2 text-sm font-black text-emerald-100 transition group-hover:bg-emerald-400/20">
+
+      Bet on the World Cup →
+
+    </div>
+
+  </div>
+
+</Link>
               <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
                 <p className="text-xl font-black text-white">
                   Important announcements

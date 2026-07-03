@@ -1,4 +1,5 @@
 import Link from "next/link";
+
 import PageShell from "@/components/PageShell";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -21,68 +22,123 @@ function sumOpenBetsByUser(bets: OpenBet[]) {
   return bets.reduce((acc: Record<string, number>, bet) => {
     if (!bet.user_id) return acc;
 
-    acc[bet.user_id] = (acc[bet.user_id] || 0) + Number(bet.amount || 0);
+    acc[bet.user_id] =
+      (acc[bet.user_id] || 0) + Number(bet.amount || 0);
 
     return acc;
   }, {});
 }
 
 export default async function LeaderboardPage() {
-  const { data: profiles, error: profilesError } = await supabaseAdmin
-    .from("profiles")
-    .select("id, display_name, rhino_coins, created_at")
-    .order("created_at", { ascending: true });
-
-  const { data: openGameBets, error: openGameBetsError } = await supabaseAdmin
-    .from("game_bets")
-    .select("user_id, amount")
-    .eq("status", "open");
-
-  const { data: openFuturesBets, error: openFuturesBetsError } =
+  const { data: profiles, error: profilesError } =
     await supabaseAdmin
-      .from("futures_bets")
+      .from("profiles")
+      .select("id, display_name, rhino_coins, created_at")
+      .order("created_at", { ascending: true });
+
+  const { data: openGameBets, error: openGameBetsError } =
+    await supabaseAdmin
+      .from("game_bets")
       .select("user_id, amount")
       .eq("status", "open");
 
-  if (profilesError || openGameBetsError || openFuturesBetsError) {
+  const {
+    data: openFuturesBets,
+    error: openFuturesBetsError,
+  } = await supabaseAdmin
+    .from("futures_bets")
+    .select("user_id, amount")
+    .eq("status", "open");
+
+  const {
+    data: openWorldCupBets,
+    error: openWorldCupBetsError,
+  } = await supabaseAdmin
+    .from("world_cup_bets")
+    .select("user_id, amount")
+    .eq("status", "open");
+
+  if (
+    profilesError ||
+    openGameBetsError ||
+    openFuturesBetsError ||
+    openWorldCupBetsError
+  ) {
     return (
       <PageShell title="Rhino Leaderboard">
         <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-300">
           {profilesError?.message ||
             openGameBetsError?.message ||
-            openFuturesBetsError?.message}
+            openFuturesBetsError?.message ||
+            openWorldCupBetsError?.message}
         </div>
       </PageShell>
     );
   }
 
-  const openGameBetsByUser = sumOpenBetsByUser(openGameBets || []);
-  const openFuturesBetsByUser = sumOpenBetsByUser(openFuturesBets || []);
+  const openGameBetsByUser =
+    sumOpenBetsByUser(openGameBets || []);
+
+  const openFuturesBetsByUser =
+    sumOpenBetsByUser(openFuturesBets || []);
+
+  const openWorldCupBetsByUser =
+    sumOpenBetsByUser(openWorldCupBets || []);
 
   const leaderboard = (profiles || [])
     .map((profile: Profile) => {
-      const currentBalance = Number(profile.rhino_coins || 0);
-      const openGameStake = openGameBetsByUser[profile.id] || 0;
-      const openFuturesStake = openFuturesBetsByUser[profile.id] || 0;
-      const openStake = openGameStake + openFuturesStake;
-      const leaderboardBalance = currentBalance + openStake;
+      const currentBalance =
+        Number(profile.rhino_coins || 0);
+
+      const openGameStake =
+        openGameBetsByUser[profile.id] || 0;
+
+      const openFuturesStake =
+        openFuturesBetsByUser[profile.id] || 0;
+
+      const openWorldCupStake =
+        openWorldCupBetsByUser[profile.id] || 0;
+
+      const openStake =
+        openGameStake +
+        openFuturesStake +
+        openWorldCupStake;
+
+      const leaderboardBalance =
+        currentBalance + openStake;
 
       return {
         ...profile,
+
         currentBalance,
+
         openGameStake,
         openFuturesStake,
+        openWorldCupStake,
+
         openStake,
         leaderboardBalance,
       };
     })
     .sort((a, b) => {
-      if (b.leaderboardBalance !== a.leaderboardBalance) {
-        return b.leaderboardBalance - a.leaderboardBalance;
+      if (
+        b.leaderboardBalance !==
+        a.leaderboardBalance
+      ) {
+        return (
+          b.leaderboardBalance -
+          a.leaderboardBalance
+        );
       }
 
-      if (b.currentBalance !== a.currentBalance) {
-        return b.currentBalance - a.currentBalance;
+      if (
+        b.currentBalance !==
+        a.currentBalance
+      ) {
+        return (
+          b.currentBalance -
+          a.currentBalance
+        );
       }
 
       return (
@@ -102,9 +158,10 @@ export default async function LeaderboardPage() {
         </p>
 
         <p className="mt-2 text-sm leading-6 text-red-100/70">
-          This ranking counts your available Rhino Coins plus coins currently
-          locked in open bets. You only lose those coins on the leaderboard if
-          the bet resolves as lost.
+          This ranking counts your available Rhino Coins plus
+          coins currently locked in open volleyball, futures,
+          and World Cup bets. You only lose those coins on the
+          leaderboard if the bet resolves as lost.
         </p>
       </div>
 
@@ -125,12 +182,14 @@ export default async function LeaderboardPage() {
       </div>
 
       <div className="overflow-x-auto rounded-3xl border border-[#C4963E]/25 bg-[#1A0F08]/90 shadow-2xl shadow-black/30">
-        <table className="w-full min-w-[900px] border-collapse">
+        <table className="w-full min-w-[950px] border-collapse">
           <thead className="bg-[#C4963E]/15 text-left">
             <tr>
               <th className="p-4">Rank</th>
               <th className="p-4">Username</th>
-              <th className="p-4">Leaderboard Balance</th>
+              <th className="p-4">
+                Leaderboard Balance
+              </th>
               <th className="p-4">Available</th>
               <th className="p-4">Open Bets</th>
               <th className="p-4">Joined</th>
@@ -139,38 +198,58 @@ export default async function LeaderboardPage() {
 
           <tbody>
             {leaderboard.map((profile, index) => (
-              <tr key={profile.id} className="border-t border-[#C4963E]/15">
+              <tr
+                key={profile.id}
+                className="border-t border-[#C4963E]/15"
+              >
                 <td className="p-4 font-black">
                   {index + 1}
                 </td>
 
                 <td className="p-4 font-black text-white">
-                  {profile.display_name || "Anonymous Rhino"}
+                  {profile.display_name ||
+                    "Anonymous Rhino"}
                 </td>
 
                 <td className="p-4">
                   <span className="rounded-full bg-[#C4963E] px-4 py-2 font-black text-[#16070B]">
-                    {profile.leaderboardBalance} 🦏
+                    {profile.leaderboardBalance}
                   </span>
                 </td>
 
                 <td className="p-4 text-red-100/80">
-                  {profile.currentBalance} 🦏
+                  {profile.currentBalance}
                 </td>
 
                 <td className="p-4 text-red-100/80">
-                  {profile.openStake} 🦏
+                  {profile.openStake}
+
                   {profile.openStake > 0 && (
-                    <span className="ml-2 text-xs text-red-100/45">
-                      ({profile.openGameStake} game ·{" "}
-                      {profile.openFuturesStake} futures)
-                    </span>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-red-100/45">
+                      <span>
+                        {profile.openGameStake} game
+                      </span>
+
+                      <span>·</span>
+
+                      <span>
+                        {profile.openFuturesStake} futures
+                      </span>
+
+                      <span>·</span>
+
+                      <span>
+                        {profile.openWorldCupStake} World Cup
+                      </span>
+                    </div>
                   )}
                 </td>
 
                 <td className="p-4 text-red-100/60">
                   {profile.created_at
-                    ? new Date(profile.created_at).toLocaleDateString()
+                    ? new Date(
+                        profile.created_at
+                      ).toLocaleDateString()
                     : ""}
                 </td>
               </tr>
@@ -178,7 +257,10 @@ export default async function LeaderboardPage() {
 
             {leaderboard.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-5 text-red-100/60">
+                <td
+                  colSpan={6}
+                  className="p-5 text-red-100/60"
+                >
                   No Rhino Coin accounts yet.
                 </td>
               </tr>
