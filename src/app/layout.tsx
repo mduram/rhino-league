@@ -8,6 +8,9 @@ import { Analytics } from "@vercel/analytics/next";
 export const metadata: Metadata = {
   title: "The Rhino League",
   description: "Volleyball schedules, scores, standings, photos, and polls.",
+  other: {
+    "google-adsense-account": "ca-pub-7191954180081880",
+  },
 };
 
 export default function RootLayout({
