@@ -10,6 +10,9 @@ type Team = {
   id: string;
   name: string;
   league: string;
+  playoff_disqualified?: boolean | null;
+  playoff_disqualification_reason?: string | null;
+  playoff_disqualified_at?: string | null;
 };
 
 type Game = {
@@ -52,11 +55,14 @@ function getResultPoints({
 export default async function StandingsPage() {
   const { data: teams, error: teamsError } = await supabase
     .from("teams")
-    .select("*");
+    .select(
+      "id, name, league, playoff_disqualified, playoff_disqualification_reason, playoff_disqualified_at"
+    );
 
   const { data: games, error: gamesError } = await supabase
     .from("games")
-    .select(`
+    .select(
+      `
       home_team_id,
       away_team_id,
       home_score,
@@ -67,7 +73,8 @@ export default async function StandingsPage() {
       is_forfeit,
       forfeit_team_id,
       forfeit_note
-    `)
+    `
+    )
     .eq("status", "completed");
 
   if (teamsError || gamesError) {
@@ -105,7 +112,9 @@ export default async function StandingsPage() {
 
       const didWin = teamScore > opponentScore;
       const didLose = teamScore < opponentScore;
-      const didForfeit = Boolean(game.is_forfeit && game.forfeit_team_id === team.id);
+      const didForfeit = Boolean(
+        game.is_forfeit && game.forfeit_team_id === team.id
+      );
 
       if (didWin) wins += 1;
       if (didLose) losses += 1;
@@ -134,10 +143,18 @@ export default async function StandingsPage() {
       pointsAgainst,
       differential: pointsFor - pointsAgainst,
       standingPoints,
+      playoffDisqualified: Boolean(team.playoff_disqualified),
+      playoffDisqualificationReason:
+        team.playoff_disqualification_reason || "",
+      playoffDisqualifiedAt: team.playoff_disqualified_at || null,
     };
   });
 
   standings.sort((a, b) => {
+    if (a.playoffDisqualified !== b.playoffDisqualified) {
+      return a.playoffDisqualified ? 1 : -1;
+    }
+
     if (b.standingPoints !== a.standingPoints) {
       return b.standingPoints - a.standingPoints;
     }
@@ -149,34 +166,68 @@ export default async function StandingsPage() {
     return b.differential - a.differential;
   });
 
+  const disqualifiedTeams = standings.filter(
+    (team) => team.playoffDisqualified
+  );
+
   return (
     <PageShell
       title="Standings"
-      subtitle="One mixed table across competitive and recreational leagues, using Rhino League playoff seeding points."
+      subtitle="Regular season playoff seeding, standings points, forfeits, and playoff eligibility."
     >
-      <div className="mb-5 rounded-3xl border border-[#C4963E]/30 bg-[#C4963E]/10 p-5 text-red-100/80">
+      {disqualifiedTeams.length > 0 && (
+        <section className="mb-6 rounded-3xl border border-red-500/30 bg-red-500/10 p-5">
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-red-200">
+            Playoff eligibility update
+          </p>
+
+          <h2 className="mt-2 text-2xl font-black text-white">
+            {disqualifiedTeams.length === 1
+              ? "1 team has been disqualified from playoffs"
+              : `${disqualifiedTeams.length} teams have been disqualified from playoffs`}
+          </h2>
+
+          <div className="mt-4 grid gap-3">
+            {disqualifiedTeams.map((team) => (
+              <div
+                key={team.id}
+                className="rounded-2xl border border-red-500/25 bg-black/20 p-4"
+              >
+                <p className="font-black text-red-100">{team.name}</p>
+
+                <p className="mt-1 text-sm text-red-100/70">
+                  {team.playoffDisqualificationReason ||
+                    "Disqualified from playoff eligibility."}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="mb-6 rounded-3xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-5 shadow-2xl shadow-black/30">
         <p className="font-black text-[#F3EEE6]">
           Regular season playoff seeding:
         </p>
 
-        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          <p>Competitive win = +3 points</p>
-          <p>Competitive loss = -1 point</p>
-          <p>Recreational win = +1 point</p>
-          <p>Recreational loss = -2 points</p>
-          <p className="font-black text-red-200">
-            Forfeit = -3 total points for forfeiting team
-          </p>
-        </div>
+        <ul className="mt-3 grid gap-2 text-sm text-red-100/75 md:grid-cols-2">
+          <li>Competitive win = +3 points</li>
+          <li>Competitive loss = -1 point</li>
+          <li>Recreational win = +1 point</li>
+          <li>Recreational loss = -2 points</li>
+          <li>Forfeit = -3 total points for forfeiting team</li>
+          <li>Playoff-disqualified teams are shown below eligible teams</li>
+        </ul>
       </div>
 
-      <div className="overflow-x-auto rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 shadow-2xl shadow-black/30">
-        <table className="w-full min-w-[900px] border-collapse">
-          <thead className="bg-[#A51C30]/20 text-left">
+      <div className="overflow-x-auto rounded-3xl border border-[#C4963E]/25 bg-[#1A0F08]/90 shadow-2xl shadow-black/30">
+        <table className="w-full min-w-[1050px] border-collapse">
+          <thead className="bg-[#C4963E]/15 text-left">
             <tr>
               <th className="p-4">Rank</th>
               <th className="p-4">Team</th>
               <th className="p-4">League</th>
+              <th className="p-4">Playoffs</th>
               <th className="p-4">GP</th>
               <th className="p-4">W</th>
               <th className="p-4">L</th>
@@ -190,20 +241,46 @@ export default async function StandingsPage() {
 
           <tbody>
             {standings.map((team, index) => (
-              <tr key={team.id} className="border-t border-[#A51C30]/20">
-                <td className="p-4 font-black">{index + 1}</td>
+              <tr
+                key={team.id}
+                className={`border-t border-[#C4963E]/15 ${
+                  team.playoffDisqualified ? "bg-red-500/10" : ""
+                }`}
+              >
+                <td className="p-4 font-black text-white">
+                  {team.playoffDisqualified ? "DQ" : index + 1}
+                </td>
 
-                <td className="p-4 font-black">
+                <td className="p-4">
                   <Link
                     href={`/teams/${team.id}`}
-                    className="text-white transition hover:text-[#F3EEE6] hover:underline"
+                    className="font-black text-white hover:text-[#C4963E]"
                   >
                     {team.name}
                   </Link>
+
+                  {team.playoffDisqualified &&
+                    team.playoffDisqualificationReason && (
+                      <p className="mt-1 max-w-sm text-xs text-red-100/60">
+                        {team.playoffDisqualificationReason}
+                      </p>
+                    )}
                 </td>
 
                 <td className="p-4">
                   <LeagueBadge league={team.league} />
+                </td>
+
+                <td className="p-4">
+                  {team.playoffDisqualified ? (
+                    <span className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-black uppercase tracking-wider text-red-200">
+                      Disqualified
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-green-500/25 bg-green-500/10 px-3 py-1 text-xs font-black uppercase tracking-wider text-green-300">
+                      Eligible
+                    </span>
+                  )}
                 </td>
 
                 <td className="p-4">{team.gamesPlayed}</td>
@@ -212,7 +289,7 @@ export default async function StandingsPage() {
 
                 <td className="p-4">
                   {team.forfeits > 0 ? (
-                    <span className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 font-black text-red-200">
+                    <span className="rounded-full bg-red-500/20 px-3 py-1 font-black text-red-200">
                       {team.forfeits}
                     </span>
                   ) : (
@@ -233,9 +310,10 @@ export default async function StandingsPage() {
         </table>
       </div>
 
-      <p className="mt-4 text-sm text-red-100/50">
-        Current ranking: seeding points, then wins, then score differential.
-        A forfeit is exactly -3 total points for the forfeiting team.
+      <p className="mt-4 text-sm text-red-100/55">
+        Current ranking: playoff eligibility first, then seeding points, then
+        wins, then score differential. A forfeit is exactly -3 total points for
+        the forfeiting team.
       </p>
     </PageShell>
   );

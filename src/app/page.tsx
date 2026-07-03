@@ -54,6 +54,17 @@ export default async function HomePage() {
     .order("scheduled_at", { ascending: false })
     .limit(3);
 
+  const { data: disqualifiedTeams } = await supabase
+    .from("teams")
+    .select(
+      "id, name, league, playoff_disqualified, playoff_disqualification_reason, playoff_disqualified_at"
+    )
+    .eq("playoff_disqualified", true)
+    .order("playoff_disqualified_at", {
+      ascending: false,
+      nullsFirst: false,
+    });
+
   return (
     <main className="min-h-screen text-white">
       <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
@@ -89,8 +100,6 @@ export default async function HomePage() {
                 >
                   League Table
                 </Link>
-
-
               </div>
             </div>
 
@@ -137,8 +146,8 @@ export default async function HomePage() {
 
               <p className="mt-4 max-w-2xl text-base leading-7 text-red-100/55">
                 Check the latest schedule, submit scores, vote in polls, upload
-                photos, talk trash in comments, and use Rhino Coins to
-                predict games.
+                photos, talk trash in comments, and use Rhino Coins to predict
+                games.
               </p>
 
               <Link
@@ -215,7 +224,8 @@ export default async function HomePage() {
                 </div>
 
                 <p className="mt-4 text-sm leading-6 text-red-100/60">
-                  Feel the emotion of the sand at the click of a button. Take control of the game!
+                  Feel the emotion of the sand at the click of a button. Take
+                  control of the game!
                 </p>
               </div>
             </div>
@@ -250,14 +260,51 @@ export default async function HomePage() {
                 </p>
               </Link>
 
-              <div className="rounded-2xl border border-[#A51C30]/25 bg-black/20 p-5">
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
                 <p className="text-xl font-black text-white">
                   Important announcements
                 </p>
 
                 <p className="mt-2 text-base leading-7 text-red-100/75">
-                  Nothing
+                  Teams that forfeit without notifying their opponent may be
+                  disqualified from playoffs.
                 </p>
+
+                {disqualifiedTeams && disqualifiedTeams.length > 0 ? (
+                  <div className="mt-4 rounded-2xl border border-red-400/25 bg-black/20 p-4">
+                    <p className="font-black text-red-100">
+                      Current playoff disqualification
+                      {disqualifiedTeams.length === 1 ? "" : "s"}:
+                    </p>
+
+                    <div className="mt-3 grid gap-2">
+                      {disqualifiedTeams.map((team: any) => (
+                        <p
+                          key={team.id}
+                          className="text-sm leading-6 text-red-100/75"
+                        >
+                          <span className="font-black text-white">
+                            {team.name}
+                          </span>
+                          {team.playoff_disqualification_reason
+                            ? ` — ${team.playoff_disqualification_reason}`
+                            : " — Disqualified from playoff eligibility."}
+                        </p>
+                      ))}
+                    </div>
+
+                    <Link
+                      href="/standings"
+                      className="mt-4 inline-flex rounded-full border border-red-300/30 bg-red-500/10 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-red-500/20"
+                    >
+                      View standings
+                    </Link>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm leading-6 text-red-100/55">
+                    No teams are currently disqualified from playoffs.
+                  </p>
+                )}
               </div>
 
               <div className="rounded-2xl border border-[#A51C30]/25 bg-black/20 p-5">
@@ -350,7 +397,13 @@ export default async function HomePage() {
                     <li>Competitive loss = -1 point</li>
                     <li>Recreational win = 1 point</li>
                     <li>Recreational loss = -2 points</li>
+                    <li>Forfeit = -3 total points</li>
                   </ul>
+
+                  <p>
+                    Teams that forfeit without notifying the opposing team may
+                    be disqualified from playoffs.
+                  </p>
 
                   <p>
                     Top 32 teams play playoffs. Everyone will make the playoffs
