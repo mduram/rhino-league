@@ -58,6 +58,7 @@ export default async function AdminPage() {
     { href: "/admin/photos", label: "Manage Photos" },
     { href: "/admin/betting", label: "Manage Betting" },
     { href: "/betting", label: "Public Betting Page" },
+    {href:"/admin/edit-scores", label: "Edit Final Scores"},
   ];
 
   return (
