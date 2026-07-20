@@ -1,4 +1,5 @@
 import Link from "next/link";
+
 import { supabase } from "@/lib/supabase";
 import AdminForms from "./AdminForms";
 
@@ -26,21 +27,17 @@ export default async function AdminPage() {
       submitted_score_pending,
       home_team:teams!games_home_team_id_fkey(name),
       away_team:teams!games_away_team_id_fkey(name)
-    `
+      `
     )
     .order("scheduled_at", { ascending: false, nullsFirst: false });
 
   if (teamsError || gamesError) {
     return (
-      <main className="min-h-screen px-6 py-12 text-white">
-        <div className="mx-auto max-w-6xl">
-          <h1 className="text-4xl font-black text-white">
-            Rhino League Admin
-          </h1>
+      <main className="mx-auto max-w-6xl px-4 py-10 text-white sm:px-6 lg:px-8">
+        <h1 className="text-4xl font-black">Rhino League Admin</h1>
 
-          <div className="mt-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-300">
-            {teamsError?.message || gamesError?.message}
-          </div>
+        <div className="mt-6 rounded-2xl border border-red-500/25 bg-red-500/10 p-5 text-red-200">
+          {teamsError?.message || gamesError?.message}
         </div>
       </main>
     );
@@ -49,6 +46,8 @@ export default async function AdminPage() {
   const adminLinks = [
     { href: "/admin/login", label: "Admin Login" },
     { href: "/admin/scores", label: "Score Control Center" },
+    { href: "/admin/edit-scores", label: "Edit Final Scores" },
+    { href: "/admin/playoff-bracket", label: "Generate Playoff Bracket" },
     { href: "/admin/playoffs", label: "Playoff Eligibility" },
     { href: "/admin/import-teams", label: "Import Teams" },
     { href: "/admin/scheduler-smart", label: "Smart Auto-Scheduler" },
@@ -58,36 +57,50 @@ export default async function AdminPage() {
     { href: "/admin/photos", label: "Manage Photos" },
     { href: "/admin/betting", label: "Manage Betting" },
     { href: "/betting", label: "Public Betting Page" },
-    {href:"/admin/edit-scores", label: "Edit Final Scores"},
+    { href: "/playoffs", label: "Public Playoff Page" },
   ];
 
   return (
-    <main className="min-h-screen px-6 py-12 text-white">
-      <div className="mx-auto max-w-7xl">
-        <p className="mb-2 text-sm font-black uppercase tracking-[0.3em] text-[#F3EEE6]">
-          Rhino League
+    <main className="mx-auto max-w-6xl px-4 py-10 text-white sm:px-6 lg:px-8">
+      <Link
+        href="/"
+        className="text-sm font-black text-[#C4963E] hover:text-[#F3EEE6]"
+      >
+        ← Rhino League
+      </Link>
+
+      <section className="mt-4 rounded-[2rem] border border-[#A51C30]/30 bg-[#230B12]/85 p-6 shadow-2xl shadow-black/30 md:p-8">
+        <p className="text-sm font-black uppercase tracking-[0.25em] text-[#F3EEE6]">
+          Admin
         </p>
 
-        <h1 className="text-4xl font-black text-white">
-          Admin
-        </h1>
+        <h1 className="mt-2 text-4xl font-black">Rhino League Admin</h1>
+
+        <p className="mt-3 max-w-3xl leading-7 text-red-100/70">
+          Manage teams, games, scores, betting, photos, playoff eligibility, and
+          the official playoff bracket.
+        </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
           {adminLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="rounded-full border border-[#C4963E]/25 bg-[#C4963E]/10 px-5 py-3 font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/20"
+              className={`rounded-full px-4 py-2 text-sm font-black transition ${
+                link.href === "/admin/playoff-bracket"
+                  ? "bg-[#C4963E] text-[#16070B] hover:bg-[#D7AA4A]"
+                  : "border border-[#A51C30]/35 bg-[#A51C30]/10 text-red-100 hover:bg-[#A51C30]/25 hover:text-white"
+              }`}
             >
               {link.label}
             </Link>
           ))}
         </div>
+      </section>
 
-        <div className="mt-10">
-          <AdminForms teams={teams || []} games={games || []} />
-        </div>
-      </div>
+      <section className="mt-8">
+        <AdminForms teams={teams || []} games={games || []} />
+      </section>
     </main>
   );
 }

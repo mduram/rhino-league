@@ -11,6 +11,9 @@ export const revalidate = 0;
 const WINNERS_IMAGE_URL =
   "https://dmg5c1valy4me.cloudfront.net/wp-content/uploads/2025/09/05130547/2025_rhino-league_hex.jpg";
 
+const SPAIN_WORLD_CUP_IMAGE_URL =
+  "https://cloudfront-us-east-1.images.arcpublishing.com/opb/7H2SHONMUJAATFRJHQQEB463J4.jpg";
+
 export default async function HomePage() {
   const { data: upcomingGames } = await supabase
     .from("games")
@@ -241,9 +244,7 @@ export default async function HomePage() {
               Announcements
             </p>
 
-            <h2 className="text-3xl font-black text-white">
-              League updates
-            </h2>
+            <h2 className="text-3xl font-black text-white">League updates</h2>
 
             <div className="mt-5 grid gap-4">
               <Link
@@ -259,49 +260,64 @@ export default async function HomePage() {
                   winners, and climb the leaderboard.
                 </p>
               </Link>
+
               <Link
+                href="/playoffs"
+                className="group relative block overflow-hidden rounded-2xl border border-[#C4963E]/40 bg-[#C4963E]/15 p-5 transition hover:bg-[#C4963E]/25"
+              >
+                <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-[#C4963E]/20 blur-3xl" />
 
-  href="/betting"
+                <div className="relative">
+                  <p className="text-sm font-black uppercase tracking-[0.2em] text-[#C4963E]">
+                    Playoffs incoming 🦏
+                  </p>
 
-  className="group relative block overflow-hidden rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-5 transition hover:bg-emerald-500/20"
+                  <p className="mt-2 text-2xl font-black text-white">
+                    The road to Rhino glory starts August 3
+                  </p>
 
->
+                  <p className="mt-2 text-base leading-7 text-red-100/75">
+                    The 32-team double-elimination playoff bracket is being
+                    prepared. Winners bracket, losers bracket, third place game
+                    at 2pm, and the championship final at 4pm on August 28.
+                  </p>
 
-  <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-emerald-400/15 blur-3xl" />
+                  <div className="mt-4 inline-flex rounded-full border border-[#C4963E]/30 bg-[#C4963E]/10 px-4 py-2 text-sm font-black text-[#F3EEE6] transition group-hover:bg-[#C4963E]/20">
+                    View playoff bracket →
+                  </div>
+                </div>
+              </Link>
 
-  <div className="relative">
+              <div className="relative overflow-hidden rounded-2xl border border-red-400/30 bg-red-500/10 p-5">
+                <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-red-400/20 blur-3xl" />
 
-    <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-200">
+                <div className="relative grid gap-5 md:grid-cols-[1fr_220px] md:items-center">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-[0.2em] text-red-200">
+                      World Cup Champions 🇪🇸
+                    </p>
 
-      New ⚽
+                    <p className="mt-2 text-4xl font-black tracking-tight text-white md:text-5xl">
+                      Felicidades España!!!
+                    </p>
 
-    </p>
+                    <p className="mt-2 text-base leading-7 text-red-100/75">
+                      Spain are World Cup champions. World Cup betting is now
+                      closed, Rhino Coin payouts are being settled, and the
+                      league turns its full attention to the Rhino playoffs.
+                    </p>
+                  </div>
 
-    <p className="mt-2 text-xl font-black text-white">
+                  <div className="overflow-hidden rounded-2xl border border-red-200/20 bg-black/25 shadow-xl shadow-black/30">
+                    <img
+                      src={SPAIN_WORLD_CUP_IMAGE_URL}
+                      alt="Spain World Cup celebration"
+                      className="h-44 w-full object-cover md:h-48"
+                    />
+                  </div>
+                </div>
+              </div>
 
-      World Cup betting is live!!!
-
-    </p>
-
-    <p className="mt-2 text-base leading-7 text-red-100/75">
-
-      Use your Rhino Coins to bet on FIFA World Cup games with
-
-      real bookmaker-derived odds. Pick the winner or the draw,
-
-      lock in your price, and climb the Rhino leaderboard.
-
-    </p>
-
-    <div className="mt-4 inline-flex rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-2 text-sm font-black text-emerald-100 transition group-hover:bg-emerald-400/20">
-
-      Bet on the World Cup →
-
-    </div>
-
-  </div>
-
-</Link>
               <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
                 <p className="text-xl font-black text-white">
                   Important announcements
@@ -348,16 +364,7 @@ export default async function HomePage() {
                   </p>
                 )}
               </div>
-
-              <div className="rounded-2xl border border-[#A51C30]/25 bg-black/20 p-5">
-                <p className="text-xl font-black text-white">
-                  Less important announcements
-                </p>
-
-                <p className="mt-2 text-base leading-7 text-red-100/75">
-                  GO SPURS!!!
-                </p>
-              </div>
+              
             </div>
           </div>
 
