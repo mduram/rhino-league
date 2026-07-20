@@ -25,17 +25,11 @@ export async function GET() {
     );
   }
 
-  const {
-    data: matches,
-    error: matchesError,
-  } = await supabaseAdmin
+  const { data: matches, error: matchesError } = await supabaseAdmin
     .from("world_cup_matches")
     .select("*")
-    .in("status", [
-      "scheduled",
-      "live",
-      "completed",
-    ])
+    .in("status", ["scheduled", "live", "completed"])
+    .eq("betting_archived", false)
     .order("scheduled_at", {
       ascending: true,
     });
@@ -51,19 +45,10 @@ export async function GET() {
     );
   }
 
-  const {
-    data: bets,
-    error: betsError,
-  } = await supabaseAdmin
+  const { data: bets, error: betsError } = await supabaseAdmin
     .from("world_cup_bets")
-    .select(
-      "match_id, side, amount, status"
-    )
-    .in("status", [
-      "open",
-      "won",
-      "lost",
-    ]);
+    .select("match_id, side, amount, status")
+    .in("status", ["open", "won", "lost"]);
 
   if (betsError) {
     return NextResponse.json(
@@ -76,44 +61,29 @@ export async function GET() {
     );
   }
 
-  const marketsByMatchId: Record<
-    string,
-    any
-  > = {};
+  const marketsByMatchId: Record<string, any> = {};
 
   for (const match of matches || []) {
     const matchBets = (bets || []).filter(
-      (bet) =>
-        bet.match_id === match.id
+      (bet) => bet.match_id === match.id
     );
 
-    const homeBets = matchBets.filter(
-      (bet) => bet.side === "home"
-    );
-
-    const drawBets = matchBets.filter(
-      (bet) => bet.side === "draw"
-    );
-
-    const awayBets = matchBets.filter(
-      (bet) => bet.side === "away"
-    );
+    const homeBets = matchBets.filter((bet) => bet.side === "home");
+    const drawBets = matchBets.filter((bet) => bet.side === "draw");
+    const awayBets = matchBets.filter((bet) => bet.side === "away");
 
     const homeAmount = homeBets.reduce(
-      (sum, bet) =>
-        sum + Number(bet.amount || 0),
+      (sum, bet) => sum + Number(bet.amount || 0),
       0
     );
 
     const drawAmount = drawBets.reduce(
-      (sum, bet) =>
-        sum + Number(bet.amount || 0),
+      (sum, bet) => sum + Number(bet.amount || 0),
       0
     );
 
     const awayAmount = awayBets.reduce(
-      (sum, bet) =>
-        sum + Number(bet.amount || 0),
+      (sum, bet) => sum + Number(bet.amount || 0),
       0
     );
 
@@ -124,42 +94,31 @@ export async function GET() {
       drawBetCount: drawBets.length,
       awayBetCount: awayBets.length,
 
-      totalBetCount:
-        matchBets.length,
+      totalBetCount: matchBets.length,
 
       homeAmount,
       drawAmount,
       awayAmount,
 
-      totalMarket:
-        homeAmount +
-        drawAmount +
-        awayAmount,
+      totalMarket: homeAmount + drawAmount + awayAmount,
 
-      // REAL bookmaker-derived odds
       homeOdds:
-        match.odds_home !== null &&
-        match.odds_home !== undefined
+        match.odds_home !== null && match.odds_home !== undefined
           ? Number(match.odds_home)
           : null,
 
       drawOdds:
-        match.odds_draw !== null &&
-        match.odds_draw !== undefined
+        match.odds_draw !== null && match.odds_draw !== undefined
           ? Number(match.odds_draw)
           : null,
 
       awayOdds:
-        match.odds_away !== null &&
-        match.odds_away !== undefined
+        match.odds_away !== null && match.odds_away !== undefined
           ? Number(match.odds_away)
           : null,
 
-      oddsSource:
-        match.odds_source || null,
-
-      oddsUpdatedAt:
-        match.odds_updated_at || null,
+      oddsSource: match.odds_source || null,
+      oddsUpdatedAt: match.odds_updated_at || null,
     };
   }
 
