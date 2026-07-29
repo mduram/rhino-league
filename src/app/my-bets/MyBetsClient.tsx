@@ -103,7 +103,10 @@ export default function MyBetsClient() {
   );
 
   const gameBetCount = useMemo(
-    () => bets.filter((bet) => bet.bet_type === "game").length,
+    () =>
+      bets.filter(
+        (bet) => bet.bet_type === "game" || bet.bet_type === "playoff"
+      ).length,
     [bets]
   );
 
@@ -290,7 +293,7 @@ function BetsList({
           bet.bet_type === "futures" ? (
             <FuturesBetCard key={`futures-${bet.id}`} bet={bet} />
           ) : (
-            <GameBetCard key={`game-${bet.id}`} bet={bet} />
+            <GameBetCard key={`${bet.bet_type}-${bet.id}`} bet={bet} />
           )
         )}
 
@@ -312,7 +315,10 @@ function GameBetCard({ bet }: { bet: any }) {
 
   return (
     <article className="rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-5 shadow-2xl shadow-black/30">
-      <BetHeader bet={bet} label="Game bet" />
+      <BetHeader
+        bet={bet}
+        label={bet.bet_type === "playoff" ? "Playoff game bet" : "Game bet"}
+      />
 
       {game ? (
         <div className="grid gap-5 md:grid-cols-[1fr_auto_1fr] md:items-center">
@@ -320,7 +326,7 @@ function GameBetCard({ bet }: { bet: any }) {
             <TeamLogo
               logoUrl={homeTeam?.logo_url || null}
               teamName={homeTeam?.name || "Home"}
-              league={game.league}
+              league={game.league || homeTeam?.league || "competitive"}
               size="sm"
             />
 
@@ -359,7 +365,7 @@ function GameBetCard({ bet }: { bet: any }) {
             <TeamLogo
               logoUrl={awayTeam?.logo_url || null}
               teamName={awayTeam?.name || "Away"}
-              league={game.league}
+              league={game.league || awayTeam?.league || "competitive"}
               size="sm"
             />
           </div>

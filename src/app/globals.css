@@ -14,11 +14,14 @@
 html {
   background: #16070b;
   color: #ffffff;
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top left, rgba(165, 28, 48, 0.55), transparent 34rem),
     radial-gradient(circle at top right, rgba(196, 150, 62, 0.18), transparent 28rem),
@@ -41,4 +44,155 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+::selection {
+  background: rgba(196, 150, 62, 0.4);
+  color: #ffffff;
+}
+
+.playoff-hero {
+  background: #16070b;
+  isolation: isolate;
+}
+
+.playoff-grid {
+  background-image:
+    linear-gradient(rgba(196, 150, 62, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(196, 150, 62, 0.055) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@keyframes route-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(196, 150, 62, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(196, 150, 62, 0);
+  }
+}
+
+.route-active {
+  animation: route-pulse 2.2s ease-in-out infinite;
+}
+
+.bracket-card {
+  -webkit-appearance: none;
+  appearance: none;
+  background-clip: padding-box;
+  display: block;
+  margin: 0;
+  padding: 0;
+  line-height: normal;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  background-color: #f8f4ee;
+  color: #16070b;
+}
+
+.bracket-team-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  border-radius: 0;
+  font: inherit;
+  line-height: normal;
+}
+
+.bracket-canvas {
+  flex: none;
+  max-width: none;
+}
+
+.bracket-scroll {
+  position: relative;
+  max-height: min(74vh, 760px);
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  touch-action: pan-x pan-y;
+  background-color: #f3eee6;
+  color: #16070b;
+}
+
+@supports (height: 1svh) {
+  .bracket-scroll {
+    max-height: min(74svh, 760px);
+  }
+}
+
+.bracket-toolbar {
+  background-color: #230b12;
+  color: #ffffff;
+}
+
+.bracket-context {
+  background-color: #e8e1d7;
+  color: #16070b;
+}
+
+.nav-streams-pill {
+  border-color: #9146ff !important;
+  background-color: #9146ff !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(145, 70, 255, 0.2);
+}
+
+.nav-streams-pill:hover {
+  background-color: #772ce8 !important;
+}
+
+.nav-whats-new-pill {
+  border-color: #2f80ed !important;
+  background-color: #2f80ed !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(47, 128, 237, 0.2);
+}
+
+.nav-whats-new-pill:hover {
+  background-color: #2568c2 !important;
+}
+
+.safari-select {
+  -webkit-appearance: menulist-button;
+  appearance: auto;
+  color-scheme: dark;
+}
+
+.nav-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .bracket-scroll {
+    scroll-behavior: auto;
+    scrollbar-gutter: auto;
+  }
+
+  .bracket-card {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    transition-property: border-color, box-shadow, background-color;
+  }
+
+  .bracket-card:hover {
+    -webkit-transform: translateY(-2px) translateZ(0) !important;
+    transform: translateY(-2px) translateZ(0) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -1,29 +1,16 @@
 import PageShell from "@/components/PageShell";
 import { supabase } from "@/lib/supabase";
 import { PLAYOFF_GAME_DEFINITIONS } from "@/lib/playoffBracket";
+import { SEASON_PHASE } from "@/lib/seasonPhase";
+import {
+  calculateStandings,
+  type StandingsGame,
+  type StandingsTeam,
+} from "@/lib/standings";
 import PlayoffBracketClient from "./PlayoffBracketClient";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-type Team = {
-  id: string;
-  name: string;
-  league: string;
-  logo_url: string | null;
-  playoff_disqualified?: boolean | null;
-};
-
-type RegularSeasonGame = {
-  home_team_id: string;
-  away_team_id: string;
-  home_score: number;
-  away_score: number;
-  status: string;
-  league: string;
-  is_forfeit?: boolean | null;
-  forfeit_team_id?: string | null;
-};
 
 type Standing = {
   seed: number;
@@ -36,6 +23,13 @@ type Standing = {
   losses: number;
   standingPoints: number;
   differential: number;
+};
+
+type BracketTeam = {
+  id: string;
+  name: string;
+  league: string;
+  logo_url: string | null;
 };
 
 type BracketGame = {
@@ -52,36 +46,12 @@ type BracketGame = {
   away_source?: string | null;
   home_score?: number | null;
   away_score?: number | null;
-  home_team?: any;
-  away_team?: any;
+  home_team?: BracketTeam | BracketTeam[] | null;
+  away_team?: BracketTeam | BracketTeam[] | null;
   provisional_home_team?: Standing | null;
   provisional_away_team?: Standing | null;
   note?: string;
 };
-
-function getResultPoints({
-  league,
-  didWin,
-  didLose,
-}: {
-  league: string;
-  didWin: boolean;
-  didLose: boolean;
-}) {
-  if (!didWin && !didLose) return 0;
-
-  if (league === "competitive") {
-    if (didWin) return 3;
-    if (didLose) return -1;
-  }
-
-  if (league === "recreational") {
-    if (didWin) return 1;
-    if (didLose) return -2;
-  }
-
-  return 0;
-}
 
 function seedFromSource(source: string | null | undefined) {
   if (!source) return null;
@@ -89,91 +59,6 @@ function seedFromSource(source: string | null | undefined) {
   const match = source.match(/^Seed\s+(\d+)/i);
 
   return match ? Number(match[1]) : null;
-}
-
-function buildLiveStandings({
-  teams,
-  games,
-}: {
-  teams: Team[];
-  games: RegularSeasonGame[];
-}) {
-  return teams
-    .filter((team) => !team.playoff_disqualified)
-    .map((team) => {
-      let wins = 0;
-      let losses = 0;
-      let gamesPlayed = 0;
-      let pointsFor = 0;
-      let pointsAgainst = 0;
-      let standingPoints = 0;
-
-      games.forEach((game) => {
-        const isHome = game.home_team_id === team.id;
-        const isAway = game.away_team_id === team.id;
-
-        if (!isHome && !isAway) return;
-
-        gamesPlayed += 1;
-
-        const teamScore = isHome ? game.home_score : game.away_score;
-        const opponentScore = isHome ? game.away_score : game.home_score;
-
-        pointsFor += teamScore;
-        pointsAgainst += opponentScore;
-
-        const didWin = teamScore > opponentScore;
-        const didLose = teamScore < opponentScore;
-
-        const didForfeit = Boolean(
-          game.is_forfeit && game.forfeit_team_id === team.id
-        );
-
-        if (didWin) wins += 1;
-        if (didLose) losses += 1;
-
-        if (didForfeit) {
-          standingPoints -= 3;
-        } else {
-          standingPoints += getResultPoints({
-            league: game.league,
-            didWin,
-            didLose,
-          });
-        }
-      });
-
-      return {
-        id: team.id,
-        name: team.name,
-        league: team.league,
-        logo_url: team.logo_url,
-        gamesPlayed,
-        wins,
-        losses,
-        standingPoints,
-        differential: pointsFor - pointsAgainst,
-      };
-    })
-    .sort((a, b) => {
-      if (b.standingPoints !== a.standingPoints) {
-        return b.standingPoints - a.standingPoints;
-      }
-
-      if (b.wins !== a.wins) {
-        return b.wins - a.wins;
-      }
-
-      if (b.differential !== a.differential) {
-        return b.differential - a.differential;
-      }
-
-      return a.name.localeCompare(b.name);
-    })
-    .map((team, index) => ({
-      ...team,
-      seed: index + 1,
-    }));
 }
 
 function buildProvisionalGames(standings: Standing[]) {
@@ -268,15 +153,22 @@ export default async function PlayoffsPage() {
     )
     .order("game_number", { ascending: true });
 
-  const liveStandings = buildLiveStandings({
-    teams: (teams || []) as Team[],
-    games: (regularSeasonGames || []) as RegularSeasonGame[],
-  });
+  const liveStandings = calculateStandings({
+    teams: (teams || []) as StandingsTeam[],
+    games: (regularSeasonGames || []) as StandingsGame[],
+  })
+    .filter((team) => !team.playoffDisqualified)
+    .map((team, index) => ({
+      ...team,
+      seed: index + 1,
+    }));
 
   const playoffTeams = liveStandings.slice(0, 30);
 
   const hasGeneratedBracket = Boolean(
-    generatedGames && generatedGames.length > 0
+    SEASON_PHASE.playoffSchedulePublished &&
+      generatedGames &&
+      generatedGames.length > 0
   );
 
   const bracketGames = hasGeneratedBracket
@@ -292,6 +184,7 @@ export default async function PlayoffsPage() {
         bracketGames={bracketGames}
         playoffTeams={playoffTeams}
         hasGeneratedBracket={hasGeneratedBracket}
+        schedulePublished={SEASON_PHASE.playoffSchedulePublished}
       />
     </PageShell>
   );

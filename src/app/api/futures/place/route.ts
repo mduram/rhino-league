@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { calculateFuturesOdds, TeamSignal } from "@/lib/futures";
+import { isRegularSeasonFuturesSlug } from "@/lib/seasonPhase";
 
 function getResultPoints({
   league,
@@ -170,6 +171,16 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Market not found." },
       { status: 404 }
+    );
+  }
+
+  if (isRegularSeasonFuturesSlug(market.slug)) {
+    return NextResponse.json(
+      {
+        error:
+          "Regular-season futures are closed while the final standings are confirmed.",
+      },
+      { status: 400 }
     );
   }
 

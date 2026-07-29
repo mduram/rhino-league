@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import GameCard from "@/components/GameCard";
 import TeamLogo from "@/components/TeamLogo";
 import { formatLeagueDateTime } from "@/lib/leagueTime";
+import { isRegularSeasonFuturesSlug } from "@/lib/seasonPhase";
 
 function normalizeTeam(team: any) {
   if (!team) return null;
@@ -41,6 +42,13 @@ export default function BettingClient() {
   );
 
   const [futuresMarkets, setFuturesMarkets] = useState<any[]>([]);
+  const [playoffGames, setPlayoffGames] = useState<any[]>([]);
+  const [playoffMarketsByGameId, setPlayoffMarketsByGameId] = useState<
+    Record<string, any>
+  >({});
+  const [playoffBettingOpen, setPlayoffBettingOpen] = useState(false);
+  const [playoffSchedulePublished, setPlayoffSchedulePublished] =
+    useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -51,9 +59,15 @@ export default function BettingClient() {
   const [futuresAmounts, setFuturesAmounts] = useState<Record<string, string>>(
     {}
   );
+  const [playoffAmounts, setPlayoffAmounts] = useState<Record<string, string>>(
+    {}
+  );
 
   const [placingBetKey, setPlacingBetKey] = useState<string | null>(null);
   const [placingFuturesKey, setPlacingFuturesKey] = useState<string | null>(
+    null
+  );
+  const [placingPlayoffKey, setPlacingPlayoffKey] = useState<string | null>(
     null
   );
 
@@ -63,12 +77,32 @@ export default function BettingClient() {
     return games.filter((game) => game.status === "scheduled");
   }, [games]);
 
+  const playoffFutures = useMemo(
+    () =>
+      futuresMarkets.filter(
+        (market) => !isRegularSeasonFuturesSlug(market.slug)
+      ),
+    [futuresMarkets]
+  );
+
+  const closedRegularSeasonFutures = useMemo(
+    () =>
+      futuresMarkets.filter((market) =>
+        isRegularSeasonFuturesSlug(market.slug)
+      ),
+    [futuresMarkets]
+  );
+
   useEffect(() => {
     async function init() {
       const { data } = await supabase.auth.getSession();
       setSession(data.session || null);
 
-      await Promise.all([loadGameMarkets(), loadFuturesMarkets()]);
+      await Promise.all([
+        loadGameMarkets(),
+        loadFuturesMarkets(),
+        loadPlayoffMarkets(),
+      ]);
 
       if (data.session) {
         await loadMe(data.session.access_token);
@@ -125,6 +159,23 @@ export default function BettingClient() {
     }
 
     setFuturesMarkets(data.markets || []);
+  }
+
+  async function loadPlayoffMarkets() {
+    const res = await fetch("/api/playoff-betting/markets", {
+      cache: "no-store",
+    });
+    const data = await readJsonSafely(res);
+
+    if (!res.ok) {
+      setMessage(data.error || "Could not load playoff markets.");
+      return;
+    }
+
+    setPlayoffGames(data.games || []);
+    setPlayoffMarketsByGameId(data.marketsByGameId || {});
+    setPlayoffBettingOpen(Boolean(data.bettingOpen));
+    setPlayoffSchedulePublished(Boolean(data.schedulePublished));
   }
 
   async function loadMe(accessToken: string) {
@@ -310,6 +361,47 @@ export default function BettingClient() {
     setPlacingFuturesKey(null);
   }
 
+  async function placePlayoffBet(gameId: string, side: "home" | "away") {
+    if (!session) {
+      setMessage("Log in first.");
+      return;
+    }
+
+    const amount = Number(playoffAmounts[gameId] || 0);
+    if (!amount || amount <= 0) {
+      setMessage("Enter a Rhino Coin amount first.");
+      return;
+    }
+
+    setPlacingPlayoffKey(`${gameId}-${side}`);
+    setMessage("");
+
+    const res = await fetch("/api/playoff-betting/place", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ gameId, side, amount }),
+    });
+    const data = await readJsonSafely(res);
+
+    if (!res.ok) {
+      setMessage(data.error || "Could not place playoff pick.");
+      setPlacingPlayoffKey(null);
+      return;
+    }
+
+    setProfile((current: any) => ({
+      ...current,
+      rhino_coins: data.rhinoCoins,
+    }));
+    setPlayoffAmounts((current) => ({ ...current, [gameId]: "" }));
+    await loadPlayoffMarkets();
+    setMessage("Playoff pick placed.");
+    setPlacingPlayoffKey(null);
+  }
+
   if (isLoading) {
     return (
       <div className="rounded-3xl border border-[#C4963E]/30 bg-[#1A0F08]/90 p-6 text-red-100/70">
@@ -320,31 +412,33 @@ export default function BettingClient() {
 
   return (
     <div className="grid gap-8">
-      <section className="rounded-3xl border border-[#C4963E]/35 bg-[#1A0F08]/95 p-6 shadow-2xl shadow-black/30">
+      <section className="playoff-grid relative overflow-hidden rounded-3xl border border-[#C4963E]/30 bg-[#1A0F08]/95 p-6 shadow-2xl shadow-black/30">
+        <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#C4963E]/14 blur-3xl" />
+        <div className="relative">
         <p className="mb-2 text-sm font-black uppercase tracking-[0.25em] text-[#C4963E]">
-          Rhino Coins
+          Rhino Coins · Playoff edition
         </p>
 
         <h2 className="text-3xl font-black text-white">
-          Rhino Coin Predictions
+          Predict the road to the final
         </h2>
 
-        <p className="mt-3 max-w-3xl text-red-100/75">
-          Everyone starts with 100 Rhino Coins. Use them to predict games,
-          futures markets, tournament outcomes, and regular-season table results.
-          Rhino Coins are fake, non-cash, and just for league chaos.
+        <p className="mt-3 max-w-3xl text-white/65">
+          Everyone starts with 100 Rhino Coins. Regular-season futures are now
+          closed, World Cup betting has retired, and the next game markets will
+          follow the official playoff bracket. Rhino Coins are fake, non-cash,
+          and just for league chaos.
         </p>
 
-        <p className="mt-3 max-w-3xl rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-4 text-sm leading-6 text-[#F3EEE6]">
-          Futures odds now combine current Rhino Coin bets, game poll popularity,
-          and historical team performance. Bottom-of-table odds invert the
-          performance and poll signals.
+        <p className="mt-3 max-w-3xl rounded-2xl border border-[#A51C30]/35 bg-[#A51C30]/12 p-4 text-sm leading-6 text-red-100/75">
+          Playoff game markets stay locked until the bracket and schedule are
+          published Friday. Tournament-winner futures remain available below.
         </p>
 
         <div className="mt-5 flex flex-wrap gap-3">
           <Link
             href="/my-bets"
-            className="rounded-full bg-[#8B5A1F] px-5 py-3 font-black text-white transition hover:bg-[#A66D28]"
+            className="rounded-full bg-[#A51C30] px-5 py-3 font-black text-white transition hover:bg-[#B92138]"
           >
             My Bets
           </Link>
@@ -368,6 +462,7 @@ export default function BettingClient() {
             </p>
           </div>
         )}
+        </div>
       </section>
 
       {!session ? (
@@ -465,18 +560,35 @@ export default function BettingClient() {
         </p>
       )}
 
+      <PlayoffMarketsSection
+        games={playoffGames}
+        marketsByGameId={playoffMarketsByGameId}
+        schedulePublished={playoffSchedulePublished}
+        bettingOpen={playoffBettingOpen}
+        session={session}
+        amounts={playoffAmounts}
+        setAmount={(gameId, value) =>
+          setPlayoffAmounts((current) => ({
+            ...current,
+            [gameId]: value,
+          }))
+        }
+        placingKey={placingPlayoffKey}
+        placeBet={placePlayoffBet}
+      />
+
       <section>
         <h2 className="mb-4 text-3xl font-black text-[#F3EEE6]">
-          Futures Markets
+          Playoff Champion Futures
         </h2>
 
         <p className="mb-5 max-w-3xl text-red-100/65">
-          Season-long markets. Open each dropdown to pick tournament winner,
-          regular-season top of table, or regular-season bottom of table.
+          The tournament-winner market continues into the playoffs. Odds update
+          with Rhino Coin activity and team performance.
         </p>
 
         <div className="grid gap-4">
-          {futuresMarkets.map((market) => (
+          {playoffFutures.map((market) => (
             <FuturesMarketDropdown
               key={market.id}
               market={market}
@@ -493,18 +605,32 @@ export default function BettingClient() {
             />
           ))}
 
-          {futuresMarkets.length === 0 && (
+          {playoffFutures.length === 0 && (
             <p className="rounded-2xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-5 text-red-100/60">
-              No futures markets are available yet. Make sure you ran the
-              futures SQL seed.
+              No playoff futures market is available yet.
             </p>
+          )}
+
+          {closedRegularSeasonFutures.length > 0 && (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-white/45">
+                Closed markets
+              </p>
+              <p className="mt-2 text-lg font-black text-white">
+                Regular-season futures are closed
+              </p>
+              <p className="mt-2 text-sm leading-6 text-white/55">
+                Top-of-table and bottom-of-table picks are frozen while final
+                results are confirmed. Existing picks remain in My Bets.
+              </p>
+            </div>
           )}
         </div>
       </section>
 
       <section>
         <h2 className="mb-4 text-3xl font-black text-[#F3EEE6]">
-          Game Markets
+          Remaining Regular-Season Games
         </h2>
 
         <div className="grid gap-6">
@@ -659,6 +785,177 @@ export default function BettingClient() {
         </div>
       </section>
     </div>
+  );
+}
+
+function PlayoffMarketsSection({
+  games,
+  marketsByGameId,
+  schedulePublished,
+  bettingOpen,
+  session,
+  amounts,
+  setAmount,
+  placingKey,
+  placeBet,
+}: {
+  games: any[];
+  marketsByGameId: Record<string, any>;
+  schedulePublished: boolean;
+  bettingOpen: boolean;
+  session: any;
+  amounts: Record<string, string>;
+  setAmount: (gameId: string, value: string) => void;
+  placingKey: string | null;
+  placeBet: (gameId: string, side: "home" | "away") => void;
+}) {
+  if (!schedulePublished) {
+    return (
+      <section className="playoff-grid relative overflow-hidden rounded-[2rem] border border-[#C4963E]/25 bg-[#C4963E]/[0.07] p-6 md:p-8">
+        <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#C4963E]/14 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-[#C4963E]">
+              Playoff game markets · Locked
+            </p>
+            <h2 className="mt-2 text-3xl font-black text-white md:text-4xl">
+              Markets arrive with Friday&apos;s bracket
+            </h2>
+            <p className="mt-3 max-w-2xl leading-7 text-white/60">
+              The betting system is ready, but no playoff game can accept picks
+              before the official schedule is published and both teams are
+              confirmed.
+            </p>
+          </div>
+          <Link
+            href="/playoffs"
+            className="rounded-full border border-[#C4963E]/35 bg-[#C4963E]/10 px-5 py-3 text-center font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/20"
+          >
+            Try Team Paths →
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section>
+      <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#C4963E]">
+            Playoff game markets
+          </p>
+          <h2 className="mt-2 text-3xl font-black text-white">
+            Pick the next winner
+          </h2>
+        </div>
+        <span
+          className={`rounded-full border px-4 py-2 text-sm font-black ${
+            bettingOpen
+              ? "border-[#C4963E]/35 bg-[#C4963E]/10 text-[#C4963E]"
+              : "border-white/10 bg-white/[0.05] text-white/50"
+          }`}
+        >
+          {bettingOpen ? "Open" : "Awaiting commissioner release"}
+        </span>
+      </div>
+
+      <div className="grid gap-5">
+        {games.map((game) => {
+          const homeTeam = normalizeTeam(game.home_team);
+          const awayTeam = normalizeTeam(game.away_team);
+          const market = marketsByGameId[game.id];
+          const closed = !bettingOpen || isBettingClosed(game);
+
+          return (
+            <article
+              key={game.id}
+              className="rounded-3xl border border-[#C4963E]/20 bg-[#230B12]/90 p-5 shadow-xl shadow-black/25"
+            >
+              <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[#C4963E]">
+                    G{game.game_number} · {game.round_label}
+                  </p>
+                  <p className="mt-2 text-sm text-white/50">
+                    {formatLeagueDateTime(game.scheduled_at)}
+                  </p>
+                </div>
+                <div className="rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs font-black text-white/55">
+                  {market?.totalMarket || 0} 🦏 in market
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {[
+                  { side: "home" as const, team: homeTeam },
+                  { side: "away" as const, team: awayTeam },
+                ].map(({ side, team }) => (
+                  <div
+                    key={side}
+                    className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <TeamLogo
+                        logoUrl={team?.logo_url || null}
+                        teamName={team?.name || side}
+                        league={team?.league || "competitive"}
+                        size="sm"
+                      />
+                      <div>
+                        <p className="font-black text-white">
+                          {team?.name || "TBD"}
+                        </p>
+                        <p className="mt-1 text-xs text-white/45">
+                          {Number(
+                            side === "home"
+                              ? market?.homeOdds || 2
+                              : market?.awayOdds || 2
+                          ).toFixed(2)}x odds
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={
+                        !session ||
+                        closed ||
+                        placingKey === `${game.id}-${side}`
+                      }
+                      onClick={() => placeBet(game.id, side)}
+                      className="mt-4 w-full rounded-xl bg-[#A51C30] px-4 py-3 font-black text-white transition hover:bg-[#B92138] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Pick {team?.name || side}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <label className="mt-4 grid gap-2">
+                <span className="text-sm font-bold text-white/60">
+                  Rhino Coins to place
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  disabled={closed}
+                  value={amounts[game.id] || ""}
+                  onChange={(event) => setAmount(game.id, event.target.value)}
+                  placeholder="Example: 10"
+                  className="rounded-xl border border-[#C4963E]/20 bg-black/25 px-4 py-3 text-white placeholder:text-white/30 disabled:opacity-45"
+                />
+              </label>
+            </article>
+          );
+        })}
+
+        {games.length === 0 && (
+          <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-white/55">
+            No confirmed playoff matchups are ready for betting yet.
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 

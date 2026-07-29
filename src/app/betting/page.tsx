@@ -8,11 +8,10 @@ export default function BettingPage() {
   return (
     <PageShell
       title="Rhino Bets"
-      subtitle="Use Rhino Coins to predict Rhino League volleyball and FIFA World Cup matches.Do you have what it takes to be a top rhino-predictor?"
+      subtitle="Use Rhino Coins to predict the 2026 Rhino League playoffs. Do you have what it takes to be the top Rhino predictor?"
     >
       <BettingTabsClient />
     </PageShell>
   );
 }
-
 

@@ -10,8 +10,9 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
-  title: "The Rhino League",
-  description: "Volleyball schedules, scores, standings, photos, and polls.",
+  title: "The Rhino League · 2026 Playoffs",
+  description:
+    "Harvard Rhino League playoff brackets, live streams, standings, schedules, scores, and Rhino Coin predictions.",
 
   other: {
     "google-adsense-account": "ca-pub-7191954180081880",

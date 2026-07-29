@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import PageShell from "@/components/PageShell";
+import { SEASON_PHASE } from "@/lib/seasonPhase";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,19 @@ export default async function LeaderboardPage() {
     .select("user_id, amount")
     .eq("status", "open");
 
+  let openPlayoffBets: OpenBet[] = [];
+  let openPlayoffBetsError: { message: string } | null = null;
+
+  if (SEASON_PHASE.playoffBettingOpen) {
+    const playoffResult = await supabaseAdmin
+      .from("playoff_game_bets")
+      .select("user_id, amount")
+      .eq("status", "open");
+
+    openPlayoffBets = playoffResult.data || [];
+    openPlayoffBetsError = playoffResult.error;
+  }
+
   const {
     data: openWorldCupBets,
     error: openWorldCupBetsError,
@@ -62,7 +76,8 @@ export default async function LeaderboardPage() {
     profilesError ||
     openGameBetsError ||
     openFuturesBetsError ||
-    openWorldCupBetsError
+    openWorldCupBetsError ||
+    openPlayoffBetsError
   ) {
     return (
       <PageShell title="Rhino Leaderboard">
@@ -70,7 +85,8 @@ export default async function LeaderboardPage() {
           {profilesError?.message ||
             openGameBetsError?.message ||
             openFuturesBetsError?.message ||
-            openWorldCupBetsError?.message}
+            openWorldCupBetsError?.message ||
+            openPlayoffBetsError?.message}
         </div>
       </PageShell>
     );
@@ -84,6 +100,8 @@ export default async function LeaderboardPage() {
 
   const openWorldCupBetsByUser =
     sumOpenBetsByUser(openWorldCupBets || []);
+
+  const openPlayoffBetsByUser = sumOpenBetsByUser(openPlayoffBets);
 
   const leaderboard = (profiles || [])
     .map((profile: Profile) => {
@@ -99,10 +117,13 @@ export default async function LeaderboardPage() {
       const openWorldCupStake =
         openWorldCupBetsByUser[profile.id] || 0;
 
+      const openPlayoffStake = openPlayoffBetsByUser[profile.id] || 0;
+
       const openStake =
         openGameStake +
         openFuturesStake +
-        openWorldCupStake;
+        openWorldCupStake +
+        openPlayoffStake;
 
       const leaderboardBalance =
         currentBalance + openStake;
@@ -115,6 +136,7 @@ export default async function LeaderboardPage() {
         openGameStake,
         openFuturesStake,
         openWorldCupStake,
+        openPlayoffStake,
 
         openStake,
         leaderboardBalance,
@@ -159,9 +181,10 @@ export default async function LeaderboardPage() {
 
         <p className="mt-2 text-sm leading-6 text-red-100/70">
           This ranking counts your available Rhino Coins plus
-          coins currently locked in open volleyball, futures,
-          and World Cup bets. You only lose those coins on the
-          leaderboard if the bet resolves as lost.
+          coins currently locked in open volleyball, futures, and playoff
+          bets. Any legacy World Cup picks waiting for settlement are also
+          counted. You only lose those coins on the leaderboard if the bet
+          resolves as lost.
         </p>
       </div>
 
@@ -230,17 +253,27 @@ export default async function LeaderboardPage() {
                         {profile.openGameStake} game
                       </span>
 
+                      {profile.openPlayoffStake > 0 && (
+                        <>
+                          <span>·</span>
+                          <span>{profile.openPlayoffStake} playoff</span>
+                        </>
+                      )}
+
                       <span>·</span>
 
                       <span>
                         {profile.openFuturesStake} futures
                       </span>
 
-                      <span>·</span>
-
-                      <span>
-                        {profile.openWorldCupStake} World Cup
-                      </span>
+                      {profile.openWorldCupStake > 0 && (
+                        <>
+                          <span>·</span>
+                          <span>
+                            {profile.openWorldCupStake} legacy World Cup
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
                 </td>

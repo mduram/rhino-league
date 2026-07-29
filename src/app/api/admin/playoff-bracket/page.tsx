@@ -66,7 +66,7 @@ export default async function PlayoffBracketAdminPage() {
         </h1>
 
         <p className="mt-3 max-w-3xl leading-7 text-red-100/70">
-          Generate the 32-team double-elimination playoff bracket from the
+          Generate the 30-team double-elimination playoff bracket from the
           current standings. This excludes playoff-disqualified teams and creates
           scheduled games from August 3 through August 28.
         </p>

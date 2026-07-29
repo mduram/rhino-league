@@ -4,57 +4,58 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const primaryLinks = [
+  { href: "/playoffs", label: "Playoffs" },
+  { href: "/streams", label: "Streams" },
+  { href: "/whats-new", label: "What’s New?" },
   { href: "/schedule", label: "Schedule" },
   { href: "/scores", label: "Scores" },
-  { href: "/standings", label: "Standings" },
-  { href: "/playoffs", label: "Playoffs" },
-  { href: "/whats-new", label: "What’s New?" },
   { href: "/submit-scores", label: "Submit Scores" },
   { href: "/donate", label: "Support" },
 ];
 
-const moreLinks = [
+const leagueLinks = [
+  { href: "/standings", label: "Standings" },
   { href: "/teams", label: "Teams" },
   { href: "/photos", label: "Photos" },
   { href: "/polls", label: "Polls" },
 ];
 
-const rhinoCoinLinks = [
+const betLinks = [
   { href: "/betting", label: "Rhino Bets" },
   { href: "/my-bets", label: "My Bets" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 
 export default function Navbar() {
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-  const [rhinoMenuOpen, setRhinoMenuOpen] = useState(false);
+  const [leagueMenuOpen, setLeagueMenuOpen] = useState(false);
+  const [betsMenuOpen, setBetsMenuOpen] = useState(false);
 
-  const moreDropdownRef = useRef<HTMLDivElement | null>(null);
-  const rhinoDropdownRef = useRef<HTMLDivElement | null>(null);
+  const leagueDropdownRef = useRef<HTMLDivElement | null>(null);
+  const betsDropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
 
       if (
-        moreDropdownRef.current &&
-        !moreDropdownRef.current.contains(target)
+        leagueDropdownRef.current &&
+        !leagueDropdownRef.current.contains(target)
       ) {
-        setMoreMenuOpen(false);
+        setLeagueMenuOpen(false);
       }
 
       if (
-        rhinoDropdownRef.current &&
-        !rhinoDropdownRef.current.contains(target)
+        betsDropdownRef.current &&
+        !betsDropdownRef.current.contains(target)
       ) {
-        setRhinoMenuOpen(false);
+        setBetsMenuOpen(false);
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setMoreMenuOpen(false);
-        setRhinoMenuOpen(false);
+        setLeagueMenuOpen(false);
+        setBetsMenuOpen(false);
       }
     }
 
@@ -68,7 +69,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[#A51C30]/25 bg-[#16070B]/95 text-white shadow-xl shadow-black/30 backdrop-blur">
+    <nav className="site-nav relative z-50 border-b border-[#A51C30]/25 bg-[#16070B] text-white shadow-xl shadow-black/30 xl:sticky xl:top-0">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="shrink-0">
           <p className="text-lg font-black leading-none text-white">
@@ -88,6 +89,10 @@ export default function Navbar() {
               className={`whitespace-nowrap rounded-full px-3 py-2 text-sm font-black transition ${
                 link.href === "/playoffs"
                   ? "bg-[#C4963E] text-[#16070B] hover:bg-[#D7AA4A]"
+                  : link.href === "/streams"
+                    ? "nav-streams-pill bg-[#9146FF] text-white shadow-lg shadow-[#9146FF]/20 hover:bg-[#772CE8]"
+                    : link.href === "/whats-new"
+                      ? "nav-whats-new-pill bg-[#2F80ED] text-white shadow-lg shadow-[#2F80ED]/20 hover:bg-[#2568C2]"
                   : "text-red-100/75 hover:bg-[#A51C30]/25 hover:text-white"
               }`}
             >
@@ -95,27 +100,30 @@ export default function Navbar() {
             </Link>
           ))}
 
-          <div ref={moreDropdownRef} className="relative">
+          <div ref={leagueDropdownRef} className="relative">
             <button
               type="button"
-              onClick={() => setMoreMenuOpen((current) => !current)}
-              aria-expanded={moreMenuOpen}
+              onClick={() => setLeagueMenuOpen((current) => !current)}
+              aria-expanded={leagueMenuOpen}
               aria-haspopup="menu"
               className="whitespace-nowrap rounded-full border border-[#A51C30]/35 bg-[#A51C30]/10 px-3 py-2 text-sm font-black text-red-100/80 transition hover:bg-[#A51C30]/25 hover:text-white"
             >
-              More {moreMenuOpen ? "▲" : "▼"}
+              League {leagueMenuOpen ? "▲" : "▼"}
             </button>
 
-            {moreMenuOpen && (
+            {leagueMenuOpen && (
               <div
                 role="menu"
                 className="absolute right-0 mt-3 w-56 overflow-hidden rounded-2xl border border-[#A51C30]/25 bg-[#230B12] p-2 shadow-2xl shadow-black/50"
               >
-                {moreLinks.map((link) => (
+                <p className="px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-red-100/45">
+                  Explore the league
+                </p>
+                {leagueLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    onClick={() => setMoreMenuOpen(false)}
+                    onClick={() => setLeagueMenuOpen(false)}
                     className="block rounded-xl px-4 py-3 text-sm font-bold text-red-100/80 hover:bg-[#A51C30]/25 hover:text-white"
                   >
                     {link.label}
@@ -125,31 +133,31 @@ export default function Navbar() {
             )}
           </div>
 
-          <div ref={rhinoDropdownRef} className="relative">
+          <div ref={betsDropdownRef} className="relative">
             <button
               type="button"
-              onClick={() => setRhinoMenuOpen((current) => !current)}
-              aria-expanded={rhinoMenuOpen}
+              onClick={() => setBetsMenuOpen((current) => !current)}
+              aria-expanded={betsMenuOpen}
               aria-haspopup="menu"
               className="whitespace-nowrap rounded-full border border-[#C4963E]/35 bg-[#C4963E]/10 px-3 py-2 text-sm font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/20"
             >
-              Rhino Coins {rhinoMenuOpen ? "▲" : "▼"}
+              Bets {betsMenuOpen ? "▲" : "▼"}
             </button>
 
-            {rhinoMenuOpen && (
+            {betsMenuOpen && (
               <div
                 role="menu"
                 className="absolute right-0 mt-3 w-56 overflow-hidden rounded-2xl border border-[#C4963E]/25 bg-[#230B12] p-2 shadow-2xl shadow-black/50"
               >
                 <p className="px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#C4963E]">
-                  Take control of the game
+                  Rhino Coins · just for fun
                 </p>
 
-                {rhinoCoinLinks.map((link) => (
+                {betLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    onClick={() => setRhinoMenuOpen(false)}
+                    onClick={() => setBetsMenuOpen(false)}
                     className="block rounded-xl px-4 py-3 text-sm font-bold text-red-100/80 hover:bg-[#A51C30]/25 hover:text-white"
                   >
                     {link.label}
@@ -169,13 +177,6 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2 xl:hidden">
           <Link
-            href="/playoffs"
-            className="rounded-full bg-[#C4963E] px-3 py-2 text-sm font-black text-[#16070B]"
-          >
-            Playoffs
-          </Link>
-
-          <Link
             href="/admin"
             className="rounded-full bg-[#A51C30] px-3 py-2 text-sm font-black text-white"
           >
@@ -186,19 +187,59 @@ export default function Navbar() {
 
       <div className="border-t border-[#A51C30]/20 px-4 py-3 xl:hidden">
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {[...primaryLinks, ...moreLinks, ...rhinoCoinLinks].map((link) => (
+          {primaryLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               className={`shrink-0 rounded-full border px-3 py-2 text-sm font-black ${
                 link.href === "/playoffs"
                   ? "border-[#C4963E]/40 bg-[#C4963E] text-[#16070B]"
+                  : link.href === "/streams"
+                    ? "nav-streams-pill border-[#9146FF] bg-[#9146FF] text-white"
+                    : link.href === "/whats-new"
+                      ? "nav-whats-new-pill border-[#2F80ED] bg-[#2F80ED] text-white"
                   : "border-[#A51C30]/25 bg-[#A51C30]/10 text-red-100/80"
               }`}
             >
               {link.label}
             </Link>
           ))}
+        </div>
+
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <details className="nav-details rounded-2xl border border-[#A51C30]/25 bg-[#A51C30]/10">
+            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-red-100/85">
+              League menu
+            </summary>
+            <div className="grid grid-cols-2 gap-2 border-t border-[#A51C30]/20 p-2">
+              {leagueLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-xl bg-black/20 px-3 py-2 text-sm font-bold text-red-100/75"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </details>
+
+          <details className="nav-details rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10">
+            <summary className="cursor-pointer list-none px-4 py-3 text-sm font-black text-[#F3EEE6]">
+              Bets menu
+            </summary>
+            <div className="grid grid-cols-2 gap-2 border-t border-[#C4963E]/20 p-2">
+              {betLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-xl bg-black/20 px-3 py-2 text-sm font-bold text-[#F3EEE6]/80"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </details>
         </div>
       </div>
     </nav>

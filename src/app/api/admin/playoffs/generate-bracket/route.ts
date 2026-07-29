@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { isValidAdminToken } from "@/lib/adminAuth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { SEASON_PHASE } from "@/lib/seasonPhase";
 import {
   buildPlayoffGameRows,
   getPlayoffSeedsFromStandings,
@@ -19,6 +20,16 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Unauthorized. Please log in again." },
       { status: 401 }
+    );
+  }
+
+  if (!SEASON_PHASE.playoffSchedulePublished) {
+    return NextResponse.json(
+      {
+        error:
+          "The playoff schedule release switch is still off. Keep it off until Friday after every regular-season result is complete.",
+      },
+      { status: 423 }
     );
   }
 

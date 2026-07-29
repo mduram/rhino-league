@@ -6,17 +6,45 @@ import { useEffect, useMemo, useState } from "react";
 import TeamLogo from "@/components/TeamLogo";
 import { formatLeagueDateTime } from "@/lib/leagueTime";
 
-function normalizeTeam(team: any) {
+type AdminTeam = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  league?: string;
+};
+
+type AdminGame = {
+  id: string;
+  game_number: number;
+  bracket: string;
+  round_label: string;
+  scheduled_at: string | null;
+  location: string | null;
+  status: string;
+  home_seed: number | null;
+  away_seed: number | null;
+  home_source: string | null;
+  away_source: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  home_team: AdminTeam | AdminTeam[] | null;
+  away_team: AdminTeam | AdminTeam[] | null;
+};
+
+type AdminSeed = {
+  seed: number;
+  standing_points: number;
+  wins: number;
+  losses: number;
+  differential: number;
+  games_played: number;
+  team: AdminTeam | AdminTeam[] | null;
+};
+
+function normalizeTeam(team: AdminTeam | AdminTeam[] | null | undefined) {
   if (!team) return null;
   if (Array.isArray(team)) return team[0] || null;
   return team;
-}
-
-function bracketLabel(value: string) {
-  if (value === "winners") return "Winners";
-  if (value === "losers") return "Losers";
-  if (value === "finals") return "Finals";
-  return value;
 }
 
 function roundOrder(label: string) {
@@ -39,7 +67,7 @@ function roundOrder(label: string) {
   return order[label] || 99;
 }
 
-function gameTeam(game: any, side: "home" | "away") {
+function gameTeam(game: AdminGame, side: "home" | "away") {
   const team = normalizeTeam(side === "home" ? game.home_team : game.away_team);
   const source = side === "home" ? game.home_source : game.away_source;
   const seed = side === "home" ? game.home_seed : game.away_seed;
@@ -63,7 +91,7 @@ function gameTeam(game: any, side: "home" | "away") {
   };
 }
 
-function GameSlot({ game }: { game: any }) {
+function GameSlot({ game }: { game: AdminGame }) {
   const home = gameTeam(game, "home");
   const away = gameTeam(game, "away");
 
@@ -161,14 +189,17 @@ function TeamLine({
   );
 }
 
-function BracketBoard({ games }: { games: any[] }) {
+function BracketBoard({ games }: { games: AdminGame[] }) {
   const grouped = useMemo(() => {
-    const byRound = games.reduce((acc: Record<string, any[]>, game) => {
-      const key = game.round_label || "Playoffs";
-      acc[key] = acc[key] || [];
-      acc[key].push(game);
-      return acc;
-    }, {});
+    const byRound = games.reduce<Record<string, AdminGame[]>>(
+      (acc, game) => {
+        const key = game.round_label || "Playoffs";
+        acc[key] = acc[key] || [];
+        acc[key].push(game);
+        return acc;
+      },
+      {}
+    );
 
     return Object.entries(byRound)
       .sort(([a], [b]) => roundOrder(a) - roundOrder(b))
@@ -204,17 +235,32 @@ export default function PlayoffBracketAdminClient({
   games,
   unfinishedRegularSeasonGames,
 }: {
-  seeds: any[];
-  games: any[];
+  seeds: AdminSeed[];
+  games: AdminGame[];
   unfinishedRegularSeasonGames: number;
 }) {
   const [adminToken, setAdminToken] = useState("");
   const [message, setMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRecordingResult, setIsRecordingResult] = useState(false);
   const [forceRegenerate, setForceRegenerate] = useState(false);
+  const [resultGameId, setResultGameId] = useState("");
+  const [homeScore, setHomeScore] = useState("");
+  const [awayScore, setAwayScore] = useState("");
+
+  const resultGames = useMemo(
+    () =>
+      games.filter((game) => {
+        const home = gameTeam(game, "home");
+        const away = gameTeam(game, "away");
+        return home.id && away.id;
+      }),
+    [games]
+  );
 
   useEffect(() => {
-    setAdminToken(localStorage.getItem("rhino_admin_token") || "");
+    const storedToken = localStorage.getItem("rhino_admin_token") || "";
+    queueMicrotask(() => setAdminToken(storedToken));
   }, []);
 
   async function generateBracket() {
@@ -259,6 +305,51 @@ export default function PlayoffBracketAdminClient({
     window.setTimeout(() => {
       window.location.reload();
     }, 900);
+  }
+
+  async function recordPlayoffResult() {
+    setMessage("");
+
+    if (!adminToken) {
+      setMessage("You are not logged in as admin. Go to /admin/login first.");
+      return;
+    }
+
+    if (!resultGameId) {
+      setMessage("Choose a playoff game first.");
+      return;
+    }
+
+    const selectedGame = games.find((game) => game.id === resultGameId);
+    if (
+      !window.confirm(
+        `Record ${homeScore}-${awayScore} for G${selectedGame?.game_number || ""} and advance the bracket?`
+      )
+    ) {
+      return;
+    }
+
+    setIsRecordingResult(true);
+    const res = await fetch("/api/admin/playoffs/update-result", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        adminToken,
+        gameId: resultGameId,
+        homeScore,
+        awayScore,
+      }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(data.error || "Could not record the playoff result.");
+      setIsRecordingResult(false);
+      return;
+    }
+
+    setMessage(`${data.message} Refreshing…`);
+    window.setTimeout(() => window.location.reload(), 800);
   }
 
   return (
@@ -333,6 +424,82 @@ export default function PlayoffBracketAdminClient({
             {message}
           </div>
         )}
+      </section>
+
+      <section className="rounded-[2rem] border border-[#1F8A70]/40 bg-[#10251F]/90 p-5 shadow-2xl shadow-black/30">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-[#72D8BF]">
+          Live playoff workflow
+        </p>
+        <h2 className="mt-2 text-2xl font-black">Record a Result + Advance</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-white/65">
+          Enter the final score once. The winner and loser are placed into their
+          next bracket games automatically; bracket predictions then score from
+          the same official result.
+        </p>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_110px_110px_auto]">
+          <select
+            value={resultGameId}
+            onChange={(event) => {
+              const nextGame = games.find(
+                (game) => game.id === event.target.value
+              );
+              setResultGameId(event.target.value);
+              setHomeScore(
+                nextGame?.home_score === null ||
+                  nextGame?.home_score === undefined
+                  ? ""
+                  : String(nextGame.home_score)
+              );
+              setAwayScore(
+                nextGame?.away_score === null ||
+                  nextGame?.away_score === undefined
+                  ? ""
+                  : String(nextGame.away_score)
+              );
+            }}
+            className="rounded-xl border border-white/15 bg-black/30 px-4 py-3 font-bold text-white"
+          >
+            <option value="">Choose a resolved matchup…</option>
+            {resultGames.map((game) => {
+              const home = gameTeam(game, "home");
+              const away = gameTeam(game, "away");
+              return (
+                <option key={game.id} value={game.id}>
+                  G{game.game_number} · {home.rawName} vs {away.rawName}
+                </option>
+              );
+            })}
+          </select>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={homeScore}
+            onChange={(event) => setHomeScore(event.target.value)}
+            placeholder="Home"
+            aria-label="Home score"
+            className="rounded-xl border border-white/15 bg-black/30 px-4 py-3 font-bold text-white"
+          />
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={awayScore}
+            onChange={(event) => setAwayScore(event.target.value)}
+            placeholder="Away"
+            aria-label="Away score"
+            className="rounded-xl border border-white/15 bg-black/30 px-4 py-3 font-bold text-white"
+          />
+          <button
+            type="button"
+            onClick={recordPlayoffResult}
+            disabled={isRecordingResult || !resultGameId}
+            className="rounded-xl bg-[#1F8A70] px-5 py-3 font-black text-white transition hover:bg-[#257F6B] disabled:opacity-50"
+          >
+            {isRecordingResult ? "Recording…" : "Record Result"}
+          </button>
+        </div>
       </section>
 
       <section className="rounded-[2rem] border border-[#C4963E]/30 bg-[#1A0F08]/90 p-5 shadow-2xl shadow-black/30">

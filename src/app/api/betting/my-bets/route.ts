@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { SEASON_PHASE } from "@/lib/seasonPhase";
 
 export const dynamic = "force-dynamic";
+
+type HydratedGame = {
+  id: string;
+  [key: string]: unknown;
+};
+
+type HydratedBet = {
+  created_at: string;
+  [key: string]: unknown;
+};
 
 async function getUserFromRequest(request: Request) {
   const authHeader = request.headers.get("authorization") || "";
@@ -54,7 +65,7 @@ export async function GET(request: Request) {
 
   const gameIds = [...new Set((gameBets || []).map((bet) => bet.game_id))];
 
-  let gamesById: Record<string, any> = {};
+  let gamesById: Record<string, HydratedGame> = {};
 
   if (gameIds.length > 0) {
     const { data: games, error: gamesError } = await supabaseAdmin
@@ -133,7 +144,74 @@ export async function GET(request: Request) {
     bet_type: "futures",
   }));
 
-  const allBets = [...hydratedGameBets, ...hydratedFuturesBets].sort(
+  let hydratedPlayoffBets: HydratedBet[] = [];
+
+  if (SEASON_PHASE.playoffSchedulePublished) {
+    const { data: playoffBets, error: playoffBetsError } = await supabaseAdmin
+      .from("playoff_game_bets")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (playoffBetsError) {
+      return NextResponse.json(
+        { error: playoffBetsError.message },
+        { status: 500 }
+      );
+    }
+
+    const playoffGameIds = [
+      ...new Set(
+        (playoffBets || []).map((bet) => bet.playoff_game_id as string)
+      ),
+    ];
+    let playoffGamesById: Record<string, HydratedGame> = {};
+
+    if (playoffGameIds.length > 0) {
+      const { data: playoffGames, error: playoffGamesError } =
+        await supabaseAdmin
+          .from("playoff_games")
+          .select(`
+            id,
+            game_number,
+            round_label,
+            scheduled_at,
+            location,
+            status,
+            home_score,
+            away_score,
+            home_team:teams!playoff_games_home_team_id_fkey(id, name, logo_url, league),
+            away_team:teams!playoff_games_away_team_id_fkey(id, name, logo_url, league)
+          `)
+          .in("id", playoffGameIds);
+
+      if (playoffGamesError) {
+        return NextResponse.json(
+          { error: playoffGamesError.message },
+          { status: 500 }
+        );
+      }
+
+      playoffGamesById = Object.fromEntries(
+        (playoffGames || []).map((game) => [game.id, game])
+      );
+    }
+
+    hydratedPlayoffBets = (playoffBets || []).map(
+      (bet) =>
+        ({
+          ...bet,
+          bet_type: "playoff",
+          game: playoffGamesById[bet.playoff_game_id] || null,
+        }) as HydratedBet
+    );
+  }
+
+  const allBets = [
+    ...hydratedGameBets,
+    ...hydratedFuturesBets,
+    ...hydratedPlayoffBets,
+  ].sort(
     (a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
@@ -148,5 +226,6 @@ export async function GET(request: Request) {
     bets: allBets,
     gameBets: hydratedGameBets,
     futuresBets: hydratedFuturesBets,
+    playoffBets: hydratedPlayoffBets,
   });
 }

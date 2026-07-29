@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { calculateFuturesOdds, TeamSignal } from "@/lib/futures";
+import { isRegularSeasonFuturesSlug } from "@/lib/seasonPhase";
 
 export const dynamic = "force-dynamic";
 
@@ -219,6 +220,12 @@ export async function GET() {
 
     return {
       ...market,
+      status: isRegularSeasonFuturesSlug(market.slug)
+        ? "closed"
+        : market.status,
+      accepting_bets:
+        market.status === "open" &&
+        !isRegularSeasonFuturesSlug(market.slug),
       options: hydratedOptions,
       totalMarket,
       totalBetCount: marketBets.length,
