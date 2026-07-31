@@ -32,6 +32,7 @@ export default async function AdminScoresPage() {
       .from("score_submissions")
       .select("*")
       .eq("status", "pending")
+      .not("game_id", "is", null)
       .order("created_at", { ascending: true });
 
   if (gamesError || submissionsError) {

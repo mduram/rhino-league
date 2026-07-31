@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Playoff betting is locked until the official Friday bracket reveal.",
+          "Playoff betting is locked until the official bracket is released.",
       },
       { status: 423 }
     );

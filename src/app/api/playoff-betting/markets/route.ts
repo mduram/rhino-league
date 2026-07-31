@@ -14,7 +14,7 @@ export async function GET() {
       schedulePublished: false,
       bettingOpen: false,
       message:
-        "Playoff markets unlock after the official bracket and schedule are published Friday.",
+        "Playoff markets unlock after the official bracket and schedule are published.",
       games: [],
       marketsByGameId: {},
     });

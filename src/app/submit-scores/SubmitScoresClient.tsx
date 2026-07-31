@@ -55,6 +55,7 @@ export default function SubmitScoresClient({ games }: { games: any[] }) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        gameType: selectedGame.game_type || "regular",
         gameId: selectedGameId,
         submittingTeamId,
         homeScore: Number(homeScore),
@@ -124,6 +125,9 @@ export default function SubmitScoresClient({ games }: { games: any[] }) {
 
                 return (
                   <option key={game.id} value={game.id}>
+                    {game.game_type === "playoff"
+                      ? `Playoff G${game.game_number} · `
+                      : ""}
                     {homeTeam?.name || "Home"} vs {awayTeam?.name || "Away"} —{" "}
                     {formatLeagueDateTime(game.scheduled_at)}
                   </option>
@@ -135,7 +139,13 @@ export default function SubmitScoresClient({ games }: { games: any[] }) {
           {selectedGame && (
             <div className="rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-5">
               <div className="mb-4 flex flex-wrap items-center gap-2">
-                <LeagueBadge league={selectedGame.league} />
+                {selectedGame.game_type === "playoff" ? (
+                  <span className="rounded-full border border-[#1F8A70]/40 bg-[#1F8A70]/15 px-3 py-1 text-xs font-black uppercase tracking-wider text-[#BFF4E7]">
+                    Playoff · G{selectedGame.game_number}
+                  </span>
+                ) : (
+                  <LeagueBadge league={selectedGame.league} />
+                )}
 
                 {selectedGame.submitted_score_pending && (
                   <span className="rounded-full border border-[#C4963E]/30 bg-black/25 px-3 py-1 text-xs font-black uppercase tracking-wider text-[#F3EEE6]">
@@ -249,9 +259,9 @@ export default function SubmitScoresClient({ games }: { games: any[] }) {
               </h3>
 
               <p className="mt-2 text-sm leading-6 text-red-100/70">
-                Only use this if one team officially forfeited. The forfeiting
-                team will receive an extra -3 seeding-point penalty once the
-                score is accepted.
+                {selectedGame.game_type === "playoff"
+                  ? "Only use this if one team officially forfeited. The bracket will advance the opponent as the winner."
+                  : "Only use this if one team officially forfeited. The forfeiting team will receive an extra -3 seeding-point penalty once the score is accepted."}
               </p>
 
               <div className="mt-4 grid gap-4 md:grid-cols-[1fr_2fr]">

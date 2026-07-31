@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isValidAdminToken } from "@/lib/adminAuth";
+import { parsePlayoffScoreGameId } from "@/lib/playoffScoreSubmissions";
+import {
+  PlayoffResultError,
+  recordPlayoffResult,
+} from "@/lib/recordPlayoffResult";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -47,6 +52,78 @@ export async function POST(request: Request) {
       { error: "Submission not found." },
       { status: 404 }
     );
+  }
+
+  const playoffGameId = parsePlayoffScoreGameId(submission.notes);
+
+  if (playoffGameId) {
+    const finalHomeScore =
+      overrideHomeScore === undefined ||
+      overrideHomeScore === null ||
+      overrideHomeScore === ""
+        ? Number(submission.home_score)
+        : Number(overrideHomeScore);
+    const finalAwayScore =
+      overrideAwayScore === undefined ||
+      overrideAwayScore === null ||
+      overrideAwayScore === ""
+        ? Number(submission.away_score)
+        : Number(overrideAwayScore);
+
+    try {
+      const result = await recordPlayoffResult({
+        gameId: playoffGameId,
+        homeScore: finalHomeScore,
+        awayScore: finalAwayScore,
+      });
+
+      const { error: submissionUpdateError } = await supabaseAdmin
+        .from("score_submissions")
+        .update({
+          status: "approved",
+          home_score: finalHomeScore,
+          away_score: finalAwayScore,
+          is_forfeit:
+            overrideIsForfeit === undefined || overrideIsForfeit === null
+              ? Boolean(submission.is_forfeit)
+              : Boolean(overrideIsForfeit),
+          forfeit_team_id:
+            overrideForfeitTeamId === undefined
+              ? submission.forfeit_team_id
+              : overrideForfeitTeamId || null,
+          forfeit_note:
+            overrideForfeitNote === undefined
+              ? submission.forfeit_note
+              : String(overrideForfeitNote || "").trim() || null,
+        })
+        .eq("id", submissionId);
+
+      if (submissionUpdateError) throw new Error(submissionUpdateError.message);
+
+      await supabaseAdmin
+        .from("score_submissions")
+        .update({ status: "rejected" })
+        .is("game_id", null)
+        .eq("notes", submission.notes)
+        .neq("id", submissionId)
+        .eq("status", "pending");
+
+      return NextResponse.json({
+        success: true,
+        gameNumber: result.gameNumber,
+        message: `Playoff G${result.gameNumber} approved and the bracket advanced.`,
+      });
+    } catch (error: unknown) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not approve the playoff score.",
+        },
+        { status: error instanceof PlayoffResultError ? error.status : 500 }
+      );
+    }
   }
 
   const { data: game, error: gameError } = await supabaseAdmin

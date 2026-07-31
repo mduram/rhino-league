@@ -6,7 +6,10 @@ import { supabase } from "@/lib/supabase";
 import GameCard from "@/components/GameCard";
 import TeamLogo from "@/components/TeamLogo";
 import { formatLeagueDateTime } from "@/lib/leagueTime";
-import { isRegularSeasonFuturesSlug } from "@/lib/seasonPhase";
+import {
+  isPlayoffFuturesSlug,
+  isRegularSeasonFuturesSlug,
+} from "@/lib/seasonPhase";
 
 function normalizeTeam(team: any) {
   if (!team) return null;
@@ -79,9 +82,7 @@ export default function BettingClient() {
 
   const playoffFutures = useMemo(
     () =>
-      futuresMarkets.filter(
-        (market) => !isRegularSeasonFuturesSlug(market.slug)
-      ),
+      futuresMarkets.filter((market) => isPlayoffFuturesSlug(market.slug)),
     [futuresMarkets]
   );
 
@@ -425,14 +426,15 @@ export default function BettingClient() {
 
         <p className="mt-3 max-w-3xl text-white/65">
           Everyone starts with 100 Rhino Coins. Regular-season futures are now
-          closed, World Cup betting has retired, and the next game markets will
-          follow the official playoff bracket. Rhino Coins are fake, non-cash,
-          and just for league chaos.
+          closed, World Cup betting has retired, and confirmed playoff game
+          markets are live. Rhino Coins are fake, non-cash, and just for league
+          chaos.
         </p>
 
         <p className="mt-3 max-w-3xl rounded-2xl border border-[#A51C30]/35 bg-[#A51C30]/12 p-4 text-sm leading-6 text-red-100/75">
-          Playoff game markets stay locked until the bracket and schedule are
-          published Friday. Tournament-winner futures remain available below.
+          {playoffBettingOpen
+            ? "The official playoff bracket is live, confirmed game markets are open below, and champion and runner-up futures are available."
+            : "Playoff game markets open after the official bracket is released. Champion and runner-up futures are available below."}
         </p>
 
         <div className="mt-5 flex flex-wrap gap-3">
@@ -579,12 +581,13 @@ export default function BettingClient() {
 
       <section>
         <h2 className="mb-4 text-3xl font-black text-[#F3EEE6]">
-          Playoff Champion Futures
+          Playoff Futures
         </h2>
 
         <p className="mb-5 max-w-3xl text-red-100/65">
-          The tournament-winner market continues into the playoffs. Odds update
-          with Rhino Coin activity and team performance.
+          Pick the 2026 champion or the team that finishes second. Odds update
+          with Rhino Coin activity and team performance, and both markets close
+          when the first playoff game begins.
         </p>
 
         <div className="grid gap-4">
@@ -628,10 +631,11 @@ export default function BettingClient() {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-4 text-3xl font-black text-[#F3EEE6]">
-          Remaining Regular-Season Games
-        </h2>
+      {scheduledGames.length > 0 && (
+        <section>
+          <h2 className="mb-4 text-3xl font-black text-[#F3EEE6]">
+            Remaining Regular-Season Games
+          </h2>
 
         <div className="grid gap-6">
           {scheduledGames.map((game) => {
@@ -777,13 +781,9 @@ export default function BettingClient() {
             );
           })}
 
-          {scheduledGames.length === 0 && (
-            <p className="rounded-2xl border border-[#C4963E]/25 bg-[#1A0F08]/90 p-5 text-red-100/60">
-              No scheduled games available for Rhino Coin predictions.
-            </p>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -819,7 +819,7 @@ function PlayoffMarketsSection({
               Playoff game markets · Locked
             </p>
             <h2 className="mt-2 text-3xl font-black text-white md:text-4xl">
-              Markets arrive with Friday&apos;s bracket
+              Markets open with the official bracket
             </h2>
             <p className="mt-3 max-w-2xl leading-7 text-white/60">
               The betting system is ready, but no playoff game can accept picks

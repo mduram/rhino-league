@@ -316,15 +316,19 @@ export default async function HomePage() {
             <div className="relative flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.25em] text-[#C4963E]">
-                  Playoffs incoming
+                  {SEASON_PHASE.playoffSchedulePublished
+                    ? "Playoffs are live"
+                    : "Playoffs incoming"}
                 </p>
                 <h2 className="mt-2 text-3xl font-black text-white">
-                  The 30-team double-elimination bracket is taking shape
+                  {SEASON_PHASE.playoffSchedulePublished
+                    ? "The official 30-team playoff bracket is here"
+                    : "The 30-team double-elimination bracket is taking shape"}
                 </h2>
                 <p className="mt-2 max-w-3xl leading-7 text-red-100/65">
-                  Explore the provisional bracket now. Official match times stay
-                  hidden until the regular season closes and the schedule is
-                  published Friday.
+                  {SEASON_PHASE.playoffSchedulePublished
+                    ? "Explore the official bracket, check every matchup, and follow the complete playoff schedule."
+                    : "Explore the provisional bracket now. Official match times appear once the regular season closes and the schedule is published."}
                 </p>
               </div>
               <span className="shrink-0 rounded-full border border-[#C4963E]/35 bg-black/20 px-5 py-3 font-black text-[#F3EEE6] transition group-hover:bg-[#C4963E]/15">
@@ -340,7 +344,7 @@ export default async function HomePage() {
                   <p className="text-sm font-black uppercase tracking-[0.25em] text-[#C4963E]">
                     {SEASON_PHASE.regularSeasonComplete
                       ? "Results are official"
-                      : "Final confirmation Friday"}
+                      : "Awaiting final confirmation"}
                   </p>
                   <h2 className="mt-2 text-3xl font-black text-white md:text-4xl">
                     {winnerNoun}

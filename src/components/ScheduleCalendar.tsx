@@ -97,6 +97,11 @@ function getGameSlotKey(game: any) {
   return `${dateKey}_${hour}`;
 }
 
+function normalizeTeam(team: any) {
+  if (!team) return null;
+  return Array.isArray(team) ? team[0] || null : team;
+}
+
 export default function ScheduleCalendar({ games }: { games: any[] }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedGame, setSelectedGame] = useState<any | null>(null);
@@ -240,9 +245,14 @@ export default function ScheduleCalendar({ games }: { games: any[] }) {
                               onClick={() => setSelectedGame(game)}
                               className="rounded-xl border border-[#A51C30]/30 bg-[#A51C30]/15 p-3 text-left transition hover:bg-[#A51C30]/25"
                             >
+                              {game.game_type === "playoff" && (
+                                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#C4963E]">
+                                  Playoff G{game.game_number} · {game.round_label}
+                                </p>
+                              )}
                               <p className="text-sm font-black text-white">
-                                {game.home_team?.name || "Home"} vs{" "}
-                                {game.away_team?.name || "Away"}
+                                {normalizeTeam(game.home_team)?.name || "Home"} vs{" "}
+                                {normalizeTeam(game.away_team)?.name || "Away"}
                               </p>
 
                               <p className="mt-1 text-xs text-red-100/50">
@@ -283,7 +293,10 @@ export default function ScheduleCalendar({ games }: { games: any[] }) {
             </button>
           </div>
 
-          <GameCard game={selectedGame} />
+          <GameCard
+            game={selectedGame}
+            showComments={selectedGame.game_type !== "playoff"}
+          />
         </div>
       )}
     </section>

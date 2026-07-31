@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { calculateFuturesOdds, TeamSignal } from "@/lib/futures";
-import { isRegularSeasonFuturesSlug } from "@/lib/seasonPhase";
+import {
+  isPlayoffFuturesSlug,
+  isRegularSeasonFuturesSlug,
+} from "@/lib/seasonPhase";
 
 function getResultPoints({
   league,
@@ -219,6 +222,28 @@ export async function POST(request: Request) {
     );
   }
 
+  if (isPlayoffFuturesSlug(market.slug)) {
+    const { data: playoffSeed, error: playoffSeedError } = await supabaseAdmin
+      .from("playoff_seeds")
+      .select("team_id")
+      .eq("team_id", option.team_id)
+      .maybeSingle();
+
+    if (playoffSeedError) {
+      return NextResponse.json(
+        { error: playoffSeedError.message },
+        { status: 500 }
+      );
+    }
+
+    if (!playoffSeed) {
+      return NextResponse.json(
+        { error: "This team is not eligible for the 2026 playoffs." },
+        { status: 400 }
+      );
+    }
+  }
+
   const { data: existingOpenBet, error: existingBetError } = await supabaseAdmin
     .from("futures_bets")
     .select("id")
@@ -311,8 +336,31 @@ export async function POST(request: Request) {
 
   const teamSignalsByTeamId = buildTeamSignals(games || []);
 
+  let eligibleOptions = options || [];
+
+  if (isPlayoffFuturesSlug(market.slug)) {
+    const { data: playoffSeeds, error: playoffSeedsError } = await supabaseAdmin
+      .from("playoff_seeds")
+      .select("team_id");
+
+    if (playoffSeedsError) {
+      return NextResponse.json(
+        { error: playoffSeedsError.message },
+        { status: 500 }
+      );
+    }
+
+    const playoffTeamIds = new Set(
+      (playoffSeeds || []).map((seed) => seed.team_id)
+    );
+    eligibleOptions = eligibleOptions.filter(
+      (candidate) =>
+        candidate.team_id && playoffTeamIds.has(candidate.team_id)
+    );
+  }
+
   const oddsByOptionId = calculateFuturesOdds({
-    options: options || [],
+    options: eligibleOptions,
     bets: existingBets || [],
     teamSignalsByTeamId,
     marketSlug: market.slug,

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "The playoff schedule release switch is still off. Keep it off until Friday after every regular-season result is complete.",
+          "The playoff schedule release switch is still off. Publish the schedule only after every regular-season result is complete.",
       },
       { status: 423 }
     );

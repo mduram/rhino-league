@@ -23,6 +23,7 @@ export default function GameCard({
 }) {
   const isCompleted = game.status === "completed";
   const isUnscheduled = game.status === "unscheduled";
+  const isPlayoff = game.game_type === "playoff" || game.league === "playoff";
 
   const homeTeam = normalizeTeam(game.home_team);
   const awayTeam = normalizeTeam(game.away_team);
@@ -31,10 +32,16 @@ export default function GameCard({
   const awayName = awayTeam?.name || "Away team";
 
   const leagueGlow =
-    game.league === "competitive" ? "bg-[#C4963E]/20" : "bg-[#A51C30]/30";
+    isPlayoff
+      ? "bg-[#1F8A70]/25"
+      : game.league === "competitive"
+        ? "bg-[#C4963E]/20"
+        : "bg-[#A51C30]/30";
 
   const scoreColor =
-    game.league === "competitive"
+    isPlayoff
+      ? "bg-[#1F8A70] text-white shadow-[#1F8A70]/25"
+      : game.league === "competitive"
       ? "bg-[#C4963E] text-[#16070B] shadow-[#C4963E]/25"
       : "bg-[#A51C30] text-white shadow-[#A51C30]/25";
 
@@ -128,7 +135,15 @@ export default function GameCard({
             </span>
           )}
 
-          {game.league && <LeagueBadge league={game.league} />}
+          {isPlayoff ? (
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#1F8A70]/60 bg-[#1F8A70]/20 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#BFF4E7]">
+              <span className="h-2 w-2 rounded-full bg-[#1F8A70]" />
+              Playoff G{game.game_number}
+              {game.round_label ? ` · ${game.round_label}` : ""}
+            </span>
+          ) : (
+            game.league && <LeagueBadge league={game.league} />
+          )}
         </div>
 
         {showPoll && !isCompleted && !isUnscheduled && (

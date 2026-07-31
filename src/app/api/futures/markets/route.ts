@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { calculateFuturesOdds, TeamSignal } from "@/lib/futures";
-import { isRegularSeasonFuturesSlug } from "@/lib/seasonPhase";
+import {
+  isPlayoffFuturesSlug,
+  isRegularSeasonFuturesSlug,
+} from "@/lib/seasonPhase";
 
 export const dynamic = "force-dynamic";
 
@@ -175,6 +178,21 @@ export async function GET() {
 
   const teamSignalsByTeamId = buildTeamSignals(games || []);
 
+  const { data: playoffSeeds, error: playoffSeedsError } = await supabaseAdmin
+    .from("playoff_seeds")
+    .select("team_id");
+
+  if (playoffSeedsError) {
+    return NextResponse.json(
+      { error: playoffSeedsError.message },
+      { status: 500 }
+    );
+  }
+
+  const playoffTeamIds = new Set(
+    (playoffSeeds || []).map((seed) => seed.team_id)
+  );
+
   const marketIds = (markets || []).map((market) => market.id);
 
   let bets: any[] = [];
@@ -197,9 +215,17 @@ export async function GET() {
   }
 
   const hydratedMarkets = (markets || []).map((market: any) => {
-    const options = normalizeOptions(market.options);
+    const options = normalizeOptions(market.options).filter(
+      (option: any) =>
+        !isPlayoffFuturesSlug(market.slug) ||
+        (option.team_id && playoffTeamIds.has(option.team_id))
+    );
 
-    const marketBets = bets.filter((bet) => bet.market_id === market.id);
+    const optionIds = new Set(options.map((option: any) => option.id));
+
+    const marketBets = bets.filter(
+      (bet) => bet.market_id === market.id && optionIds.has(bet.option_id)
+    );
 
     const oddsByOptionId = calculateFuturesOdds({
       options,

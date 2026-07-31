@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 
+function normalizeTeam(team: any) {
+  if (!team) return null;
+  return Array.isArray(team) ? team[0] || null : team;
+}
+
 export default function ScoreSubmissionsClient({
   submissions,
 }: {
@@ -99,7 +104,9 @@ export default function ScoreSubmissionsClient({
         >
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-400">
-              Pending score
+              {submission.game_type === "playoff"
+                ? `Pending playoff score · G${submission.game?.game_number || "?"}`
+                : "Pending score"}
             </p>
 
             {submission.conflict && (
@@ -110,8 +117,8 @@ export default function ScoreSubmissionsClient({
           </div>
 
           <h2 className="mt-2 text-2xl font-black text-white">
-            {submission.game?.home_team?.name || "Home"} vs{" "}
-            {submission.game?.away_team?.name || "Away"}
+            {normalizeTeam(submission.game?.home_team)?.name || "Home"} vs{" "}
+            {normalizeTeam(submission.game?.away_team)?.name || "Away"}
           </h2>
 
           <p className="mt-3 text-4xl font-black text-orange-300">
@@ -126,8 +133,24 @@ export default function ScoreSubmissionsClient({
           </p>
 
           <p className="mt-1 text-sm text-neutral-400">
-            Submitted by: {submission.submitted_by || "Anonymous"}
+            Submitted by:{" "}
+            {submission.submitter_name ||
+              submission.submitted_by ||
+              "Anonymous"}
           </p>
+
+          {submission.submitter_email && (
+            <p className="mt-1 text-sm text-neutral-400">
+              Contact: {submission.submitter_email}
+            </p>
+          )}
+
+          {submission.game_type === "playoff" &&
+            submission.game?.round_label && (
+              <p className="mt-2 text-sm font-bold text-[#BFF4E7]">
+                {submission.game.round_label}
+              </p>
+            )}
 
           {submission.notes && (
             <p className="mt-2 text-sm text-neutral-400">
@@ -148,7 +171,7 @@ export default function ScoreSubmissionsClient({
             </button>
 
             <button
-              onClick={() => reject(submission.id, submission.game_id)}
+              onClick={() => reject(submission.id, submission.game_id || "")}
               className="rounded-xl bg-red-600 px-5 py-3 font-black text-white hover:bg-red-700"
             >
               Reject

@@ -2487,8 +2487,10 @@ export default function PlayoffBracketClient({
             The bracket below is{" "}
             {hasGeneratedBracket ? "officially generated" : "provisional"}.
             In the 30-team field, seeds #1 and #2 receive first-round BYEs and
-            advance directly to the next winners-bracket round. The official
-            schedule remains locked until Friday.
+            advance directly to the next winners-bracket round.{" "}
+            {schedulePublished
+              ? "The official schedule is now live."
+              : "The official schedule appears after the regular season closes."}
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -2501,7 +2503,7 @@ export default function PlayoffBracketClient({
             </div>
 
             <div className="rounded-full border border-[#A51C30]/40 bg-[#A51C30]/14 px-5 py-3 font-black text-red-100">
-              Schedule reveal: Friday
+              Official schedule: {schedulePublished ? "Live" : "Locked"}
             </div>
 
             <Link
@@ -2568,7 +2570,7 @@ export default function PlayoffBracketClient({
               },
               {
                 key: "schedule",
-                label: schedulePublished ? "Schedule" : "Schedule · Friday",
+                label: schedulePublished ? "Schedule" : "Schedule · Locked",
                 count: schedulePublished ? tabCounts.schedule : "locked",
               },
               { key: "seeds", label: "Seeds", count: tabCounts.seeds },
@@ -2634,7 +2636,7 @@ export default function PlayoffBracketClient({
             <p className="mt-2 text-sm leading-6 text-red-100/65">
               {hasGeneratedBracket
                 ? "This view uses the official bracket and published playoff schedule."
-                : "This view is generated from live standings. The official schedule stays hidden until Friday's regular-season closeout."}
+                : "This view is generated from live standings. The official schedule appears after the regular season closes."}
             </p>
           </div>
 

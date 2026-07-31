@@ -1,4 +1,12 @@
 import { NextResponse } from "next/server";
+import {
+  makePlayoffScoreNote,
+} from "@/lib/playoffScoreSubmissions";
+import {
+  PlayoffResultError,
+  recordPlayoffResult,
+} from "@/lib/recordPlayoffResult";
+import { SEASON_PHASE } from "@/lib/seasonPhase";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 function scoresMatch(a: any, b: any) {
@@ -13,10 +21,183 @@ function scoresMatch(a: any, b: any) {
   return sameScore && sameForfeit;
 }
 
+async function submitPlayoffScore({
+  gameId,
+  submittingTeamId,
+  homeScore,
+  awayScore,
+  submitterName,
+  submitterEmail,
+  isForfeit,
+  forfeitTeamId,
+  forfeitNote,
+}: {
+  gameId: string;
+  submittingTeamId: string;
+  homeScore: number;
+  awayScore: number;
+  submitterName: unknown;
+  submitterEmail: unknown;
+  isForfeit: unknown;
+  forfeitTeamId: string | null | undefined;
+  forfeitNote: unknown;
+}) {
+  if (!SEASON_PHASE.playoffSchedulePublished) {
+    throw new PlayoffResultError(
+      "Playoff score submissions open after the official schedule is published.",
+      423
+    );
+  }
+
+  if (homeScore === awayScore) {
+    throw new PlayoffResultError("A playoff game cannot end in a tie.");
+  }
+
+  const { data: game, error: gameError } = await supabaseAdmin
+    .from("playoff_games")
+    .select(
+      "id, game_number, status, home_team_id, away_team_id, scheduled_at"
+    )
+    .eq("id", gameId)
+    .maybeSingle();
+
+  if (gameError) throw new Error(gameError.message);
+  if (!game) throw new PlayoffResultError("Playoff game not found.", 404);
+  if (game.status === "completed") {
+    throw new PlayoffResultError(
+      "This playoff game already has an accepted score."
+    );
+  }
+  if (
+    game.status !== "scheduled" ||
+    !game.scheduled_at ||
+    !game.home_team_id ||
+    !game.away_team_id
+  ) {
+    throw new PlayoffResultError(
+      "This playoff matchup is not ready for score submissions."
+    );
+  }
+
+  const submittingIsHome = submittingTeamId === game.home_team_id;
+  const submittingIsAway = submittingTeamId === game.away_team_id;
+  if (!submittingIsHome && !submittingIsAway) {
+    throw new PlayoffResultError(
+      "Submitting team must be one of the teams in this playoff game."
+    );
+  }
+
+  const parsedIsForfeit = Boolean(isForfeit);
+  const cleanForfeitTeamId = parsedIsForfeit ? forfeitTeamId || null : null;
+  if (
+    parsedIsForfeit &&
+    cleanForfeitTeamId !== game.home_team_id &&
+    cleanForfeitTeamId !== game.away_team_id
+  ) {
+    throw new PlayoffResultError(
+      "Forfeit team must be one of the teams in this playoff game."
+    );
+  }
+
+  const note = makePlayoffScoreNote(gameId);
+  const { data: existingSubmission, error: existingError } =
+    await supabaseAdmin
+      .from("score_submissions")
+      .select("id")
+      .is("game_id", null)
+      .eq("notes", note)
+      .eq("submitting_team_id", submittingTeamId)
+      .in("status", ["pending", "approved"])
+      .maybeSingle();
+
+  if (existingError) throw new Error(existingError.message);
+  if (existingSubmission) {
+    throw new PlayoffResultError(
+      "Your team has already submitted a score for this playoff game."
+    );
+  }
+
+  const opposingTeamId = submittingIsHome
+    ? game.away_team_id
+    : game.home_team_id;
+  const submissionPayload = {
+    game_id: null,
+    submitting_team_id: submittingTeamId,
+    home_score: homeScore,
+    away_score: awayScore,
+    submitter_name: String(submitterName || "").trim() || null,
+    submitter_email: String(submitterEmail || "").trim() || null,
+    notes: note,
+    status: "pending",
+    is_forfeit: parsedIsForfeit,
+    forfeit_team_id: cleanForfeitTeamId,
+    forfeit_note: parsedIsForfeit
+      ? String(forfeitNote || "").trim() || null
+      : null,
+  };
+
+  const { data: newSubmission, error: insertError } = await supabaseAdmin
+    .from("score_submissions")
+    .insert(submissionPayload)
+    .select("*")
+    .single();
+
+  if (insertError) throw new Error(insertError.message);
+
+  const { data: opposingSubmission, error: opposingError } =
+    await supabaseAdmin
+      .from("score_submissions")
+      .select("*")
+      .is("game_id", null)
+      .eq("notes", note)
+      .eq("submitting_team_id", opposingTeamId)
+      .eq("status", "pending")
+      .maybeSingle();
+
+  if (opposingError) throw new Error(opposingError.message);
+
+  if (opposingSubmission && scoresMatch(newSubmission, opposingSubmission)) {
+    const result = await recordPlayoffResult({
+      gameId,
+      homeScore,
+      awayScore,
+    });
+
+    const { error: submissionsUpdateError } = await supabaseAdmin
+      .from("score_submissions")
+      .update({
+        status: "approved",
+        auto_approved: true,
+      })
+      .in("id", [newSubmission.id, opposingSubmission.id]);
+
+    if (submissionsUpdateError) {
+      throw new Error(submissionsUpdateError.message);
+    }
+
+    return {
+      success: true,
+      autoApproved: true,
+      gameNumber: result.gameNumber,
+      message:
+        "Playoff score approved because both teams matched. The bracket has advanced.",
+    };
+  }
+
+  return {
+    success: true,
+    autoApproved: false,
+    gameNumber: game.game_number,
+    message:
+      "Playoff score submitted. It will be approved when the other team matches it or an admin reviews it.",
+  };
+}
+
 export async function POST(request: Request) {
   const body = await request.json();
 
   const {
+    gameType,
     gameId,
     submittingTeamId,
     homeScore,
@@ -52,6 +233,34 @@ export async function POST(request: Request) {
       { error: "Scores must be valid non-negative numbers." },
       { status: 400 }
     );
+  }
+
+  if (gameType === "playoff") {
+    try {
+      return NextResponse.json(
+        await submitPlayoffScore({
+          gameId,
+          submittingTeamId,
+          homeScore: parsedHomeScore,
+          awayScore: parsedAwayScore,
+          submitterName,
+          submitterEmail,
+          isForfeit,
+          forfeitTeamId,
+          forfeitNote,
+        })
+      );
+    } catch (error: unknown) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not submit the playoff score.",
+        },
+        { status: error instanceof PlayoffResultError ? error.status : 500 }
+      );
+    }
   }
 
   const { data: game, error: gameError } = await supabaseAdmin
