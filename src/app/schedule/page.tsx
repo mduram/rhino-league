@@ -40,15 +40,15 @@ export default async function SchedulePage() {
         status,
         home_score,
         away_score,
+        home_source,
+        away_source,
         home_team_id,
         away_team_id,
         home_team:teams!playoff_games_home_team_id_fkey(id, name, logo_url, league),
         away_team:teams!playoff_games_away_team_id_fkey(id, name, logo_url, league)
       `)
-      .in("status", ["scheduled", "completed"])
+      .in("status", ["pending", "scheduled", "completed"])
       .not("scheduled_at", "is", null)
-      .not("home_team_id", "is", null)
-      .not("away_team_id", "is", null)
       .order("scheduled_at", { ascending: true }),
   ]);
 
@@ -90,7 +90,7 @@ export default async function SchedulePage() {
   return (
     <PageShell
       title="Schedule"
-      subtitle="The complete regular-season and playoff schedule, with upcoming matches and final scores."
+      subtitle="Every playoff time slot is shown now. Future matchups update automatically as bracket results are recorded."
     >
       <div className="grid gap-8">
         <ScheduleCalendar games={scheduledGames} />

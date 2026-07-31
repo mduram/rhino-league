@@ -12,6 +12,36 @@ function normalizeTeam(team: any) {
   return team;
 }
 
+function ParticipantMark({
+  team,
+  name,
+  league,
+}: {
+  team: any;
+  name: string;
+  league?: string | null;
+}) {
+  if (team) {
+    return (
+      <TeamLogo
+        logoUrl={team.logo_url}
+        teamName={name}
+        league={league}
+        size="sm"
+      />
+    );
+  }
+
+  return (
+    <div
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#C4963E]/35 bg-[#C4963E]/10 text-lg font-black text-[#C4963E]"
+      aria-label={`${name} bracket source`}
+    >
+      ?
+    </div>
+  );
+}
+
 export default function GameCard({
   game,
   showPoll = false,
@@ -28,8 +58,8 @@ export default function GameCard({
   const homeTeam = normalizeTeam(game.home_team);
   const awayTeam = normalizeTeam(game.away_team);
 
-  const homeName = homeTeam?.name || "Home team";
-  const awayName = awayTeam?.name || "Away team";
+  const homeName = homeTeam?.name || game.home_source || "TBD";
+  const awayName = awayTeam?.name || game.away_source || "TBD";
 
   const leagueGlow =
     isPlayoff
@@ -74,11 +104,10 @@ export default function GameCard({
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
           <div className="flex items-center gap-3">
-            <TeamLogo
-              logoUrl={homeTeam?.logo_url}
-              teamName={homeName}
+            <ParticipantMark
+              team={homeTeam}
+              name={homeName}
               league={game.league}
-              size="sm"
             />
 
             <div>
@@ -87,7 +116,7 @@ export default function GameCard({
               </p>
 
               <TeamNameLink
-                team={homeTeam}
+                team={homeTeam || { name: homeName }}
                 className="mt-1 block text-2xl font-black text-white"
               />
             </div>
@@ -114,16 +143,15 @@ export default function GameCard({
               </p>
 
               <TeamNameLink
-                team={awayTeam}
+                team={awayTeam || { name: awayName }}
                 className="mt-1 block text-2xl font-black text-white"
               />
             </div>
 
-            <TeamLogo
-              logoUrl={awayTeam?.logo_url}
-              teamName={awayName}
+            <ParticipantMark
+              team={awayTeam}
+              name={awayName}
               league={game.league}
-              size="sm"
             />
           </div>
         </div>

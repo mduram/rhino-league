@@ -13,6 +13,7 @@ const TIME_SLOTS = [
   { label: "9–10am", hour: 9 },
   { label: "10–11am", hour: 10 },
   { label: "12–1pm", hour: 12 },
+  { label: "2–3pm", hour: 14 },
   { label: "3–4pm", hour: 15 },
   { label: "4–5pm", hour: 16 },
 ];
@@ -100,6 +101,17 @@ function getGameSlotKey(game: any) {
 function normalizeTeam(team: any) {
   if (!team) return null;
   return Array.isArray(team) ? team[0] || null : team;
+}
+
+function participantName(game: any, side: "home" | "away") {
+  const team = normalizeTeam(
+    side === "home" ? game.home_team : game.away_team
+  );
+
+  if (team?.name) return team.name;
+
+  const source = side === "home" ? game.home_source : game.away_source;
+  return source || "TBD";
 }
 
 export default function ScheduleCalendar({ games }: { games: any[] }) {
@@ -214,7 +226,7 @@ export default function ScheduleCalendar({ games }: { games: any[] }) {
                   const slotKey = `${dayKey}_${slot.hour}`;
                   const slotGames = gamesBySlot.get(slotKey) || [];
 
-                  if (isFridayPickup) {
+                  if (isFridayPickup && slotGames.length === 0) {
                     return (
                       <div
                         key={slotKey}
@@ -251,8 +263,8 @@ export default function ScheduleCalendar({ games }: { games: any[] }) {
                                 </p>
                               )}
                               <p className="text-sm font-black text-white">
-                                {normalizeTeam(game.home_team)?.name || "Home"} vs{" "}
-                                {normalizeTeam(game.away_team)?.name || "Away"}
+                                {participantName(game, "home")} vs{" "}
+                                {participantName(game, "away")}
                               </p>
 
                               <p className="mt-1 text-xs text-red-100/50">

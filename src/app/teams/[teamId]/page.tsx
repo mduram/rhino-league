@@ -41,6 +41,24 @@ type RawGame = {
   away_team: TeamMini | TeamMini[] | null;
 };
 
+type RawPlayoffGame = {
+  id: string;
+  game_number: number;
+  bracket: string;
+  round_label: string;
+  scheduled_at: string | null;
+  location: string | null;
+  status: string;
+  home_score: number | null;
+  away_score: number | null;
+  home_source: string | null;
+  away_source: string | null;
+  home_team_id: string | null;
+  away_team_id: string | null;
+  home_team: TeamMini | TeamMini[] | null;
+  away_team: TeamMini | TeamMini[] | null;
+};
+
 type Game = {
   id: string;
   scheduled_at: string | null;
@@ -52,10 +70,16 @@ type Game = {
   away_votes: number;
   league: string;
   weight: number | null;
-  home_team_id: string;
-  away_team_id: string;
+  home_team_id: string | null;
+  away_team_id: string | null;
   home_team: TeamMini | null;
   away_team: TeamMini | null;
+  game_type?: "regular" | "playoff";
+  game_number?: number;
+  bracket?: string;
+  round_label?: string;
+  home_source?: string | null;
+  away_source?: string | null;
 };
 
 function normalizeJoinedTeam(value: TeamMini | TeamMini[] | null): TeamMini | null {
@@ -69,6 +93,7 @@ function normalizeJoinedTeam(value: TeamMini | TeamMini[] | null): TeamMini | nu
 function normalizeGame(game: RawGame): Game {
   return {
     ...game,
+    game_type: "regular",
     home_score: Number(game.home_score || 0),
     away_score: Number(game.away_score || 0),
     home_votes: Number(game.home_votes || 0),
@@ -76,6 +101,32 @@ function normalizeGame(game: RawGame): Game {
     home_team: normalizeJoinedTeam(game.home_team),
     away_team: normalizeJoinedTeam(game.away_team),
   };
+}
+
+function normalizePlayoffGame(game: RawPlayoffGame): Game {
+  return {
+    ...game,
+    game_type: "playoff",
+    league: "playoff",
+    weight: null,
+    home_score: Number(game.home_score || 0),
+    away_score: Number(game.away_score || 0),
+    home_votes: 0,
+    away_votes: 0,
+    home_team: normalizeJoinedTeam(game.home_team),
+    away_team: normalizeJoinedTeam(game.away_team),
+  };
+}
+
+function sortByScheduledTime(a: Game, b: Game) {
+  const aTime = a.scheduled_at
+    ? new Date(a.scheduled_at).getTime()
+    : Number.MAX_SAFE_INTEGER;
+  const bTime = b.scheduled_at
+    ? new Date(b.scheduled_at).getTime()
+    : Number.MAX_SAFE_INTEGER;
+
+  return aTime - bTime;
 }
 
 function getResultPoints({
@@ -121,26 +172,51 @@ export default async function TeamPage({
 
   const typedTeam = team as Team;
 
-  const { data: games, error: gamesError } = await supabase
-    .from("games")
-    .select(`
-      id,
-      scheduled_at,
-      location,
-      status,
-      home_score,
-      away_score,
-      home_votes,
-      away_votes,
-      league,
-      weight,
-      home_team_id,
-      away_team_id,
-      home_team:teams!games_home_team_id_fkey(id, name, logo_url),
-      away_team:teams!games_away_team_id_fkey(id, name, logo_url)
-    `)
-    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-    .order("scheduled_at", { ascending: true, nullsFirst: false });
+  const [regularGamesResult, playoffGamesResult] = await Promise.all([
+    supabase
+      .from("games")
+      .select(`
+        id,
+        scheduled_at,
+        location,
+        status,
+        home_score,
+        away_score,
+        home_votes,
+        away_votes,
+        league,
+        weight,
+        home_team_id,
+        away_team_id,
+        home_team:teams!games_home_team_id_fkey(id, name, logo_url),
+        away_team:teams!games_away_team_id_fkey(id, name, logo_url)
+      `)
+      .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+      .order("scheduled_at", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("playoff_games")
+      .select(`
+        id,
+        game_number,
+        bracket,
+        round_label,
+        scheduled_at,
+        location,
+        status,
+        home_score,
+        away_score,
+        home_source,
+        away_source,
+        home_team_id,
+        away_team_id,
+        home_team:teams!playoff_games_home_team_id_fkey(id, name, logo_url),
+        away_team:teams!playoff_games_away_team_id_fkey(id, name, logo_url)
+      `)
+      .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+      .order("scheduled_at", { ascending: true, nullsFirst: false }),
+  ]);
+
+  const gamesError = regularGamesResult.error || playoffGamesResult.error;
 
   if (gamesError) {
     return (
@@ -152,15 +228,31 @@ export default async function TeamPage({
     );
   }
 
-  const teamGames = ((games || []) as unknown as RawGame[]).map(normalizeGame);
-
-  const upcomingGames = teamGames.filter(
-    (game) => game.status === "scheduled"
+  const teamGames = ((regularGamesResult.data || []) as unknown as RawGame[]).map(
+    normalizeGame
   );
+  const teamPlayoffGames = (
+    (playoffGamesResult.data || []) as unknown as RawPlayoffGame[]
+  ).map(normalizePlayoffGame);
 
-  const completedGames = teamGames.filter(
+  const upcomingGames = [
+    ...teamGames.filter((game) => game.status === "scheduled"),
+    ...teamPlayoffGames.filter(
+      (game) =>
+        Boolean(game.scheduled_at) &&
+        (game.status === "scheduled" || game.status === "pending")
+    ),
+  ].sort(sortByScheduledTime);
+
+  const completedRegularGames = teamGames.filter(
     (game) => game.status === "completed"
   );
+  const completedGames = [
+    ...completedRegularGames,
+    ...teamPlayoffGames.filter(
+      (game) => game.status === "completed" && Boolean(game.scheduled_at)
+    ),
+  ].sort(sortByScheduledTime);
 
   let wins = 0;
   let losses = 0;
@@ -169,7 +261,7 @@ export default async function TeamPage({
   let pointsAgainst = 0;
   let standingPoints = 0;
 
-  completedGames.forEach((game) => {
+  completedRegularGames.forEach((game) => {
     const isHome = game.home_team_id === teamId;
     const teamScore = isHome ? game.home_score : game.away_score;
     const opponentScore = isHome ? game.away_score : game.home_score;
@@ -285,7 +377,12 @@ export default async function TeamPage({
 
         <div className="grid gap-5">
           {upcomingGames.map((game) => (
-            <GameCard key={game.id} game={game} showPoll />
+            <GameCard
+              key={game.id}
+              game={game}
+              showPoll={game.game_type !== "playoff"}
+              showComments={game.game_type !== "playoff"}
+            />
           ))}
 
           {upcomingGames.length === 0 && (
@@ -312,7 +409,11 @@ export default async function TeamPage({
 
         <div className="grid gap-5">
           {completedGames.map((game) => (
-            <GameCard key={game.id} game={game} />
+            <GameCard
+              key={game.id}
+              game={game}
+              showComments={game.game_type !== "playoff"}
+            />
           ))}
 
           {completedGames.length === 0 && (
