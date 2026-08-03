@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { isValidAdminToken } from "@/lib/adminAuth";
+import { makePlayoffScoreNote } from "@/lib/playoffScoreSubmissions";
 import {
   PlayoffResultError,
   recordPlayoffResult,
 } from "@/lib/recordPlayoffResult";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
   const { adminToken, gameId, homeScore, awayScore } = await request.json();
@@ -22,6 +24,15 @@ export async function POST(request: Request) {
       homeScore: Number(homeScore),
       awayScore: Number(awayScore),
     });
+
+    const { error: submissionsError } = await supabaseAdmin
+      .from("score_submissions")
+      .update({ status: "rejected" })
+      .is("game_id", null)
+      .eq("notes", makePlayoffScoreNote(gameId))
+      .eq("status", "pending");
+
+    if (submissionsError) throw new Error(submissionsError.message);
 
     return NextResponse.json({ success: true, ...result });
   } catch (error: unknown) {

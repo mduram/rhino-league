@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { parsePlayoffScoreGameId } from "@/lib/playoffScoreSubmissions";
 import AdminScoresClient from "./AdminScoresClient";
 
 export const dynamic = "force-dynamic";
@@ -6,25 +7,25 @@ export const revalidate = 0;
 
 export default async function AdminScoresPage() {
   const { data: games, error: gamesError } = await supabaseAdmin
-    .from("games")
+    .from("playoff_games")
     .select(`
       id,
+      game_number,
+      bracket,
+      round_label,
       scheduled_at,
       location,
       status,
       home_score,
       away_score,
-      league,
-      submitted_score_pending,
       home_team_id,
       away_team_id,
-      is_forfeit,
-      forfeit_team_id,
-      forfeit_note,
-      home_team:teams!games_home_team_id_fkey(id, name, logo_url),
-      away_team:teams!games_away_team_id_fkey(id, name, logo_url)
+      home_team:teams!playoff_games_home_team_id_fkey(id, name, logo_url, league),
+      away_team:teams!playoff_games_away_team_id_fkey(id, name, logo_url, league)
     `)
     .neq("status", "completed")
+    .not("home_team_id", "is", null)
+    .not("away_team_id", "is", null)
     .order("scheduled_at", { ascending: true, nullsFirst: false });
 
   const { data: pendingSubmissions, error: submissionsError } =
@@ -32,8 +33,23 @@ export default async function AdminScoresPage() {
       .from("score_submissions")
       .select("*")
       .eq("status", "pending")
-      .not("game_id", "is", null)
+      .is("game_id", null)
+      .like("notes", "rhino:playoff-game:%")
       .order("created_at", { ascending: true });
+
+  const playoffSubmissions = (pendingSubmissions || [])
+    .map((submission) => ({
+      ...submission,
+      game_id: parsePlayoffScoreGameId(submission.notes),
+      game_type: "playoff",
+    }))
+    .filter((submission) => Boolean(submission.game_id));
+
+  const playoffGames = (games || []).map((game) => ({
+    ...game,
+    game_type: "playoff",
+    league: "playoff",
+  }));
 
   if (gamesError || submissionsError) {
     return (
@@ -67,14 +83,14 @@ export default async function AdminScoresPage() {
         </h1>
 
         <p className="mt-3 max-w-3xl text-red-100/70">
-          Review open score submissions, see whether one or both teams have
-          submitted, accept matching results, reject bad submissions, or manually
-          add a score when needed.
+          Review playoff score submissions, accept a result, reject a bad
+          submission, or manually record a playoff score. Accepted results
+          advance the official bracket immediately.
         </p>
 
         <AdminScoresClient
-          games={games || []}
-          pendingSubmissions={pendingSubmissions || []}
+          games={playoffGames}
+          pendingSubmissions={playoffSubmissions}
         />
       </div>
     </main>

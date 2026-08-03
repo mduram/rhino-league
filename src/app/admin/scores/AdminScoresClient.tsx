@@ -1,9 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { formatLeagueDateTime } from "@/lib/leagueTime";
 import TeamLogo from "@/components/TeamLogo";
-import LeagueBadge from "@/components/LeagueBadge";
 
 type ViewMode = "needs_action" | "one_submission" | "both_submitted" | "no_submission" | "all_open";
 
@@ -144,6 +144,7 @@ export default function AdminScoresClient({
   games: any[];
   pendingSubmissions: any[];
 }) {
+  const router = useRouter();
   const [adminToken, setAdminToken] = useState("");
   const [gameList, setGameList] = useState(games || []);
   const [submissionList, setSubmissionList] = useState(pendingSubmissions || []);
@@ -155,16 +156,11 @@ export default function AdminScoresClient({
 
   const [homeScoreByGameId, setHomeScoreByGameId] = useState<Record<string, string>>({});
   const [awayScoreByGameId, setAwayScoreByGameId] = useState<Record<string, string>>({});
-  const [forfeitTeamByGameId, setForfeitTeamByGameId] = useState<Record<string, string>>({});
-  const [forfeitNoteByGameId, setForfeitNoteByGameId] = useState<Record<string, string>>({});
-
   useEffect(() => {
     setAdminToken(localStorage.getItem("rhino_admin_token") || "");
 
     const initialHomeScores: Record<string, string> = {};
     const initialAwayScores: Record<string, string> = {};
-    const initialForfeits: Record<string, string> = {};
-    const initialForfeitNotes: Record<string, string> = {};
 
     games.forEach((game) => {
       initialHomeScores[game.id] =
@@ -177,11 +173,6 @@ export default function AdminScoresClient({
           ? ""
           : String(game.away_score);
 
-      initialForfeits[game.id] = game.is_forfeit
-        ? game.forfeit_team_id || ""
-        : "";
-
-      initialForfeitNotes[game.id] = game.forfeit_note || "";
     });
 
     pendingSubmissions.forEach((submission) => {
@@ -193,19 +184,10 @@ export default function AdminScoresClient({
         initialAwayScores[submission.game_id] = String(submission.away_score ?? "");
       }
 
-      if (submission.is_forfeit && !initialForfeits[submission.game_id]) {
-        initialForfeits[submission.game_id] = submission.forfeit_team_id || "";
-      }
-
-      if (submission.forfeit_note && !initialForfeitNotes[submission.game_id]) {
-        initialForfeitNotes[submission.game_id] = submission.forfeit_note || "";
-      }
     });
 
     setHomeScoreByGameId(initialHomeScores);
     setAwayScoreByGameId(initialAwayScores);
-    setForfeitTeamByGameId(initialForfeits);
-    setForfeitNoteByGameId(initialForfeitNotes);
   }, [games, pendingSubmissions]);
 
   const submissionsByGameId = useMemo(() => {
@@ -264,7 +246,8 @@ export default function AdminScoresClient({
         homeTeam?.name?.toLowerCase().includes(query) ||
         awayTeam?.name?.toLowerCase().includes(query) ||
         game.location?.toLowerCase().includes(query) ||
-        game.league?.toLowerCase().includes(query);
+        game.round_label?.toLowerCase().includes(query) ||
+        String(game.game_number || "").includes(query);
 
       const matchesView =
         viewMode === "all_open" ||
@@ -288,15 +271,6 @@ export default function AdminScoresClient({
       [game.id]: String(submission.away_score ?? ""),
     }));
 
-    setForfeitTeamByGameId((current) => ({
-      ...current,
-      [game.id]: submission.is_forfeit ? submission.forfeit_team_id || "" : "",
-    }));
-
-    setForfeitNoteByGameId((current) => ({
-      ...current,
-      [game.id]: submission.forfeit_note || "",
-    }));
   }
 
   async function approveSubmission(game: any, submission: any) {
@@ -313,7 +287,7 @@ export default function AdminScoresClient({
     const confirmed = window.confirm(
       `Approve ${submission.home_score}-${submission.away_score} for ${
         homeTeam?.name || "Home"
-      } vs ${awayTeam?.name || "Away"}? This will close the game as completed.`
+      } vs ${awayTeam?.name || "Away"}? This will finalize the game and advance the playoff bracket.`
     );
 
     if (!confirmed) return;
@@ -348,6 +322,7 @@ export default function AdminScoresClient({
     setExpandedGameId(null);
     setMessage(data.message || "Submission approved and game closed.");
     setBusyKey(null);
+    router.refresh();
   }
 
   async function rejectSubmission(game: any, submission: any) {
@@ -405,9 +380,6 @@ export default function AdminScoresClient({
 
     const homeScore = homeScoreByGameId[game.id];
     const awayScore = awayScoreByGameId[game.id];
-    const forfeitTeamId = forfeitTeamByGameId[game.id] || "";
-    const isForfeit = Boolean(forfeitTeamId);
-
     if (homeScore === "" || awayScore === "") {
       setMessage("Enter both home and away scores before saving.");
       return;
@@ -416,14 +388,10 @@ export default function AdminScoresClient({
     const homeTeam = normalizeTeam(game.home_team);
     const awayTeam = normalizeTeam(game.away_team);
 
-    const forfeitText = isForfeit
-      ? ` This will mark ${forfeitTeamLabel(forfeitTeamId, game)} as forfeited.`
-      : "";
-
     const confirmed = window.confirm(
-      `Manually close ${homeTeam?.name || "Home"} vs ${
+      `Record ${homeTeam?.name || "Home"} vs ${
         awayTeam?.name || "Away"
-      } as ${homeScore}-${awayScore}?${forfeitText}`
+      } as ${homeScore}-${awayScore} and advance the bracket?`
     );
 
     if (!confirmed) return;
@@ -431,7 +399,7 @@ export default function AdminScoresClient({
     const key = `manual-${game.id}`;
     setBusyKey(key);
 
-    const res = await fetch("/api/admin/update-game-score", {
+    const res = await fetch("/api/admin/playoffs/update-result", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -441,11 +409,6 @@ export default function AdminScoresClient({
         gameId: game.id,
         homeScore: Number(homeScore),
         awayScore: Number(awayScore),
-        status: "completed",
-        clearPending: true,
-        isForfeit,
-        forfeitTeamId: isForfeit ? forfeitTeamId : null,
-        forfeitNote: forfeitNoteByGameId[game.id] || "",
       }),
     });
 
@@ -463,8 +426,9 @@ export default function AdminScoresClient({
     );
 
     setExpandedGameId(null);
-    setMessage(data.message || "Game score saved and game closed.");
+    setMessage(data.message || "Playoff result saved and bracket advanced.");
     setBusyKey(null);
+    router.refresh();
   }
 
   return (
@@ -473,12 +437,12 @@ export default function AdminScoresClient({
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div>
             <h2 className="text-2xl font-black text-white">
-              Open Score Queue
+              Playoff Score Queue
             </h2>
 
             <p className="mt-2 max-w-3xl text-red-100/65">
-              Completed games are hidden. Use this queue to process submitted
-              scores or manually close games that are missing submissions.
+              Completed games are hidden. Process captain submissions or enter
+              a result manually; every accepted score advances the bracket.
             </p>
 
             {adminToken ? (
@@ -494,7 +458,7 @@ export default function AdminScoresClient({
 
           <input
             className="w-full rounded-full border border-[#C4963E]/25 bg-black/30 px-5 py-3 text-white placeholder:text-red-100/35 lg:max-w-sm"
-            placeholder="Search team, league, location..."
+            placeholder="Search team, game number, round..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -547,7 +511,7 @@ export default function AdminScoresClient({
       <section className="grid gap-4">
         {filteredRows.length === 0 && (
           <p className="rounded-3xl border border-[#A51C30]/25 bg-[#230B12]/85 p-6 text-red-100/60">
-            No games match this view.
+            No playoff games match this view.
           </p>
         )}
 
@@ -567,20 +531,6 @@ export default function AdminScoresClient({
             }
             setAwayScore={(value) =>
               setAwayScoreByGameId((current) => ({
-                ...current,
-                [row.game.id]: value,
-              }))
-            }
-            forfeitTeamId={forfeitTeamByGameId[row.game.id] || ""}
-            setForfeitTeamId={(value) =>
-              setForfeitTeamByGameId((current) => ({
-                ...current,
-                [row.game.id]: value,
-              }))
-            }
-            forfeitNote={forfeitNoteByGameId[row.game.id] || ""}
-            setForfeitNote={(value) =>
-              setForfeitNoteByGameId((current) => ({
                 ...current,
                 [row.game.id]: value,
               }))
@@ -637,10 +587,6 @@ function ScoreQueueCard({
   awayScore,
   setHomeScore,
   setAwayScore,
-  forfeitTeamId,
-  setForfeitTeamId,
-  forfeitNote,
-  setForfeitNote,
   approveSubmission,
   rejectSubmission,
   applySubmissionToEditor,
@@ -654,10 +600,6 @@ function ScoreQueueCard({
   awayScore: string;
   setHomeScore: (value: string) => void;
   setAwayScore: (value: string) => void;
-  forfeitTeamId: string;
-  setForfeitTeamId: (value: string) => void;
-  forfeitNote: string;
-  setForfeitNote: (value: string) => void;
   approveSubmission: (game: any, submission: any) => void;
   rejectSubmission: (game: any, submission: any) => void;
   applySubmissionToEditor: (game: any, submission: any) => void;
@@ -683,7 +625,9 @@ function ScoreQueueCard({
               {status.label}
             </span>
 
-            {game.league && <LeagueBadge league={game.league} />}
+            <span className="rounded-full border border-[#1F8A70]/45 bg-[#1F8A70]/15 px-3 py-1 text-xs font-black uppercase tracking-wider text-[#BFF4E7]">
+              Playoff G{game.game_number}
+            </span>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
@@ -691,7 +635,7 @@ function ScoreQueueCard({
               <TeamLogo
                 logoUrl={homeTeam?.logo_url || null}
                 teamName={homeTeam?.name || "Home"}
-                league={game.league}
+                league="playoff"
                 size="sm"
               />
 
@@ -722,7 +666,7 @@ function ScoreQueueCard({
               <TeamLogo
                 logoUrl={awayTeam?.logo_url || null}
                 teamName={awayTeam?.name || "Away"}
-                league={game.league}
+                league="playoff"
                 size="sm"
               />
             </div>
@@ -848,41 +792,6 @@ function ScoreQueueCard({
               </label>
             </div>
 
-            <div className="mt-4 grid gap-4 md:grid-cols-[1fr_2fr]">
-              <label className="grid gap-2">
-                <span className="text-sm font-bold text-red-100/70">
-                  Forfeit
-                </span>
-
-                <select
-                  className="rounded-xl border border-red-500/25 bg-black/30 px-4 py-3 text-white"
-                  value={forfeitTeamId}
-                  onChange={(e) => setForfeitTeamId(e.target.value)}
-                >
-                  <option value="">No forfeit</option>
-                  <option value={game.home_team_id}>
-                    {homeTeam?.name || "Home"} forfeited (-3 total)
-                  </option>
-                  <option value={game.away_team_id}>
-                    {awayTeam?.name || "Away"} forfeited (-3 total)
-                  </option>
-                </select>
-              </label>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-bold text-red-100/70">
-                  Forfeit note
-                </span>
-
-                <input
-                  className="rounded-xl border border-red-500/25 bg-black/30 px-4 py-3 text-white placeholder:text-red-100/35"
-                  placeholder="Optional"
-                  value={forfeitNote}
-                  onChange={(e) => setForfeitNote(e.target.value)}
-                />
-              </label>
-            </div>
-
             <button
               type="button"
               disabled={busyKey === `manual-${game.id}`}
@@ -891,7 +800,7 @@ function ScoreQueueCard({
             >
               {busyKey === `manual-${game.id}`
                 ? "Saving..."
-                : "Save and Close Game"}
+                : "Save Result + Advance Bracket"}
             </button>
           </section>
         </div>
@@ -970,7 +879,7 @@ function SubmissionCard({
 
           {submission.is_forfeit && (
             <p className="mt-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm font-black text-red-200">
-              Forfeit: {forfeitName || "Unknown team"} (-3 total)
+              Forfeit: {forfeitName || "Unknown team"}
               {submission.forfeit_note ? ` · ${submission.forfeit_note}` : ""}
             </p>
           )}

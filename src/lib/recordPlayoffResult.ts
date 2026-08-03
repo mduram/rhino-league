@@ -1,3 +1,5 @@
+import { revalidatePath } from "next/cache";
+
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type PlayoffGameRow = {
@@ -229,6 +231,11 @@ export async function recordPlayoffResult({
   }
 
   await advanceResult(game.game_number, winnerTeamId, loserTeamId);
+
+  revalidatePath("/playoffs");
+  revalidatePath("/schedule");
+  revalidatePath("/scores");
+  revalidatePath("/submit-scores");
 
   return {
     gameNumber: game.game_number,
