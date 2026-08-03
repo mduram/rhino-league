@@ -77,21 +77,21 @@ export default async function SchedulePage() {
       away_votes: 0,
       submitted_score_pending: false,
     })),
-  ]
-    .filter(
-      (game) =>
-        game.game_type !== "playoff" ||
-        Boolean(game.home_team_id || game.away_team_id)
-    )
-    .sort((a, b) => {
-      const aTime = a.scheduled_at
-        ? new Date(a.scheduled_at).getTime()
-        : Number.MIN_SAFE_INTEGER;
-      const bTime = b.scheduled_at
-        ? new Date(b.scheduled_at).getTime()
-        : Number.MIN_SAFE_INTEGER;
-      return bTime - aTime;
-    });
+  ].sort((a, b) => {
+    const aTime = a.scheduled_at
+      ? new Date(a.scheduled_at).getTime()
+      : Number.MIN_SAFE_INTEGER;
+    const bTime = b.scheduled_at
+      ? new Date(b.scheduled_at).getTime()
+      : Number.MIN_SAFE_INTEGER;
+    return bTime - aTime;
+  });
+
+  const listedGames = scheduledGames.filter(
+    (game) =>
+      game.game_type !== "playoff" ||
+      Boolean(game.home_team_id || game.away_team_id)
+  );
 
   return (
     <PageShell
@@ -107,7 +107,7 @@ export default async function SchedulePage() {
           </h2>
 
           <div className="grid gap-5">
-            {scheduledGames.map((game) => (
+            {listedGames.map((game) => (
               <GameCard
                 key={game.id}
                 game={game}
@@ -118,7 +118,7 @@ export default async function SchedulePage() {
             ))}
           </div>
 
-          {scheduledGames.length === 0 && (
+          {listedGames.length === 0 && (
             <p className="text-red-100/60">No games have been scheduled yet.</p>
           )}
         </section>
