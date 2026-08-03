@@ -77,15 +77,21 @@ export default async function SchedulePage() {
       away_votes: 0,
       submitted_score_pending: false,
     })),
-  ].sort((a, b) => {
-    const aTime = a.scheduled_at
-      ? new Date(a.scheduled_at).getTime()
-      : Number.MIN_SAFE_INTEGER;
-    const bTime = b.scheduled_at
-      ? new Date(b.scheduled_at).getTime()
-      : Number.MIN_SAFE_INTEGER;
-    return bTime - aTime;
-  });
+  ]
+    .filter(
+      (game) =>
+        game.game_type !== "playoff" ||
+        Boolean(game.home_team_id || game.away_team_id)
+    )
+    .sort((a, b) => {
+      const aTime = a.scheduled_at
+        ? new Date(a.scheduled_at).getTime()
+        : Number.MIN_SAFE_INTEGER;
+      const bTime = b.scheduled_at
+        ? new Date(b.scheduled_at).getTime()
+        : Number.MIN_SAFE_INTEGER;
+      return bTime - aTime;
+    });
 
   return (
     <PageShell
