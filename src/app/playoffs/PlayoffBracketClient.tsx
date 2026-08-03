@@ -8,6 +8,7 @@ import TeamLogo from "@/components/TeamLogo";
 import {
   BRACKET_CHALLENGE_ENTRY_FEE,
   buildBracketChallenge,
+  getBracketChallengeNumericPicks,
   type BracketChallengeResult,
   type BracketChallengeTeam,
 } from "@/lib/bracketChallenge";
@@ -48,6 +49,7 @@ type BracketGame = {
   away_source?: string | null;
   home_score?: number | null;
   away_score?: number | null;
+  winner_team_id?: string | null;
   home_team?: BracketTeam | BracketTeam[] | null;
   away_team?: BracketTeam | BracketTeam[] | null;
   provisional_home_team?: Standing | null;
@@ -123,7 +125,7 @@ function getBracketSubtitle(tab: TabKey, hasGeneratedBracket: boolean) {
   }
 
   if (tab === "challenge") {
-    return "Pick every matchup, submit one bracket for 100 Rhino Coins, and chase the winner-take-all prize pot.";
+    return "Pick the remaining bracket for 100 Rhino Coins. Each matchup locks when it starts, so earlier entries have more points available.";
   }
 
   if (tab === "schedule") {
@@ -549,6 +551,7 @@ function PickableBracketCard({
   away,
   pickedWinnerId,
   statusLabel,
+  pickTone = "scoring",
   disabled,
   left,
   top,
@@ -561,6 +564,7 @@ function PickableBracketCard({
   away: ReturnType<typeof gameTeam>;
   pickedWinnerId?: string | null;
   statusLabel: string;
+  pickTone?: "scoring" | "path" | "result";
   disabled: boolean;
   left: number;
   top: number;
@@ -581,7 +585,9 @@ function PickableBracketCard({
         aria-pressed={picked}
         className={`bracket-team-button flex h-8 w-full items-center gap-2 border-b px-2.5 text-left last:border-b-0 disabled:cursor-not-allowed ${
           picked
-            ? "border-[#1F8A70]/40 bg-[#DDF5ED] text-[#124D40] shadow-[inset_4px_0_0_#1F8A70]"
+            ? pickTone === "scoring"
+              ? "border-[#1F8A70]/40 bg-[#DDF5ED] text-[#124D40] shadow-[inset_4px_0_0_#1F8A70]"
+              : "border-[#C4963E]/45 bg-[#FFF0C2] text-[#5D3A00] shadow-[inset_4px_0_0_#C4963E]"
             : "border-[#16070B]/10 bg-[#F8F4EE] text-[#16070B] hover:bg-[#FFF0C2] disabled:hover:bg-[#F8F4EE]"
         }`}
       >
@@ -615,7 +621,9 @@ function PickableBracketCard({
       style={{ left, top, width, height }}
       className={`bracket-card absolute z-10 overflow-hidden rounded-xl border bg-[#F8F4EE] text-left shadow-lg transition ${
         pickedWinnerId
-          ? "border-[#1F8A70] shadow-[#1F8A70]/15"
+          ? pickTone === "scoring"
+            ? "border-[#1F8A70] shadow-[#1F8A70]/15"
+            : "border-[#C4963E] shadow-[#C4963E]/15"
           : canPick
             ? "border-[#C4963E] ring-2 ring-[#C4963E]/20"
             : "border-[#16070B]/20"
@@ -624,7 +632,9 @@ function PickableBracketCard({
       <div
         className={`flex h-6 items-center justify-between px-2.5 text-[0.65rem] font-black uppercase tracking-[0.12em] ${
           pickedWinnerId
-            ? "bg-[#1F8A70] text-white"
+            ? pickTone === "scoring"
+              ? "bg-[#1F8A70] text-white"
+              : "bg-[#C4963E] text-[#16070B]"
             : canPick
               ? "bg-[#C4963E] text-[#16070B]"
               : "bg-[#E8E1D7] text-[#16070B]/55"
@@ -719,6 +729,9 @@ function BracketView({
   predictionResults = [],
   onPredictionPick,
   predictionLocked = false,
+  predictionOpenGameNumbers = EMPTY_GAME_NUMBERS,
+  predictionResolvedGameNumbers = EMPTY_GAME_NUMBERS,
+  predictionEntryEligibleGameNumbers = EMPTY_GAME_NUMBERS,
   onScenarioPick,
 }: {
   games: BracketGame[];
@@ -733,6 +746,9 @@ function BracketView({
   predictionResults?: BracketChallengeResult[];
   onPredictionPick?: (gameNumber: number, teamId: string) => void;
   predictionLocked?: boolean;
+  predictionOpenGameNumbers?: Set<number>;
+  predictionResolvedGameNumbers?: Set<number>;
+  predictionEntryEligibleGameNumbers?: Set<number>;
   onScenarioPick?: (gameNumber: number, teamId: string) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -1086,6 +1102,17 @@ function BracketView({
             const scenario = scenarioByGame.get(game.game_number);
 
             if (onPredictionPick && prediction) {
+              const isOpenForScoring = predictionOpenGameNumbers.has(
+                game.game_number
+              );
+              const hasOfficialResult = predictionResolvedGameNumbers.has(
+                game.game_number
+              );
+              const wasEligibleAtSubmission =
+                predictionEntryEligibleGameNumbers.has(game.game_number);
+              const isPathOnly = predictionLocked
+                ? !wasEligibleAtSubmission
+                : !isOpenForScoring;
               const home = prediction.home
                 ? bracketChallengeTeam(prediction.home)
                 : gameTeam(game, "home");
@@ -1100,18 +1127,27 @@ function BracketView({
                   home={home}
                   away={away}
                   pickedWinnerId={prediction.winner?.id}
+                  pickTone={isPathOnly ? "path" : "scoring"}
                   statusLabel={
                     predictionLocked
-                      ? "LOCKED"
+                      ? wasEligibleAtSubmission
+                        ? "ENTRY PICK"
+                        : "PATH ONLY"
                       : prediction.isBye
                         ? "BYE"
+                        : hasOfficialResult
+                          ? "RESULT"
+                          : !isOpenForScoring
+                            ? "PATH ONLY"
                         : prediction.hasValidPick
                           ? "PICKED"
                           : prediction.home && prediction.away
                             ? "PICK WINNER"
                             : "WAITING"
                   }
-                  disabled={predictionLocked || prediction.isBye}
+                  disabled={
+                    predictionLocked || prediction.isBye || hasOfficialResult
+                  }
                   onPick={(teamId) =>
                     onPredictionPick(game.game_number, teamId)
                   }
@@ -1187,14 +1223,15 @@ function BracketView({
         <div className="flex items-center gap-3 font-black">
           {pickableMode && (
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#1F8A70]" /> Picked winner
+              <span className="h-2.5 w-2.5 rounded-full bg-[#1F8A70]" /> Scoring pick
             </span>
           )}
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-[#4E8F57]" /> Winner
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#C4963E]" /> Team route
+            <span className="h-2.5 w-2.5 rounded-full bg-[#C4963E]" />{" "}
+            {pickableMode ? "Path-only route" : "Team route"}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-[#A51C30]" /> Selected game
@@ -1294,19 +1331,27 @@ type BracketChallengeStatus = {
   entryCount: number;
   pot: number;
   locksAt?: string | null;
+  nextLockAt?: string | null;
+  openGameNumbers?: number[];
+  lockedGameNumbers?: number[];
+  maxAvailablePoints?: number;
+  actualWinners?: Record<string, string>;
   completedGames?: number;
   message?: string;
   leaders: {
     rank: number;
     displayName: string;
     score: number;
+    maxPoints: number;
     status: string;
     payout: number;
   }[];
   myEntry?: {
     id: string;
-    picks: Record<string, string>;
+    picks: Record<string, unknown>;
     liveScore: number;
+    maxPoints: number;
+    eligibleGameNumbers: number[];
     status: string;
     payout: number;
   } | null;
@@ -1332,6 +1377,10 @@ function BracketChallenge({
     pot: 0,
     leaders: [],
     myEntry: null,
+    openGameNumbers: [],
+    lockedGameNumbers: [],
+    maxAvailablePoints: 0,
+    actualWinners: {},
   });
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -1351,15 +1400,53 @@ function BracketChallenge({
       ),
     [teams]
   );
+  const submitted = Boolean(status.myEntry);
+  const actualWinnerPicks = useMemo(
+    () =>
+      Object.fromEntries(
+        games
+          .filter((game) => game.winner_team_id)
+          .map((game) => [game.game_number, String(game.winner_team_id)])
+      ) as Record<number, string>,
+    [games]
+  );
+  const challengeInputPicks = useMemo(
+    () =>
+      submitted
+        ? picks
+        : {
+            ...picks,
+            ...actualWinnerPicks,
+          },
+    [actualWinnerPicks, picks, submitted]
+  );
   const challenge = useMemo(
     () =>
       buildBracketChallenge({
         games,
         teams: challengeTeams,
-        picks,
+        picks: challengeInputPicks,
       }),
-    [games, challengeTeams, picks]
+    [games, challengeTeams, challengeInputPicks]
   );
+  const openGameNumberSet = useMemo(
+    () => new Set(status.openGameNumbers || []),
+    [status.openGameNumbers]
+  );
+  const resolvedGameNumberSet = useMemo(
+    () => new Set(Object.keys(actualWinnerPicks).map(Number)),
+    [actualWinnerPicks]
+  );
+  const entryEligibleGameNumberSet = useMemo(
+    () => new Set(status.myEntry?.eligibleGameNumbers || []),
+    [status.myEntry?.eligibleGameNumbers]
+  );
+  const completedScoringPicks = challenge.results.filter(
+    (result) =>
+      openGameNumberSet.has(result.game.game_number) &&
+      result.requiresPick &&
+      result.hasValidPick
+  ).length;
   const activeGames = games.filter((game) => game.bracket === activeBracket);
   const activeResults = challenge.results.filter(
     (result) => result.game.bracket === activeBracket
@@ -1370,14 +1457,13 @@ function BracketChallenge({
       : activeBracket === "losers"
         ? LOSERS_ROUNDS
         : FINALS_ROUNDS;
-  const nextOpenGame = challenge.results.find(
+  const nextDecision = challenge.results.find(
     (result) =>
       result.requiresPick &&
       result.home &&
       result.away &&
       !result.hasValidPick
   );
-  const submitted = Boolean(status.myEntry);
 
   async function loadStatus(accessToken?: string) {
     const res = await fetch("/api/playoff-bracket-challenge", {
@@ -1396,14 +1482,7 @@ function BracketChallenge({
 
     setStatus(data);
     if (data.myEntry?.picks) {
-      setPicks(
-        Object.fromEntries(
-          Object.entries(data.myEntry.picks).map(([gameNumber, teamId]) => [
-            Number(gameNumber),
-            String(teamId),
-          ])
-        )
-      );
+      setPicks(getBracketChallengeNumericPicks(data.myEntry.picks));
     }
     setLoading(false);
   }
@@ -1432,8 +1511,12 @@ function BracketChallenge({
   }, []);
 
   function pickWinner(gameNumber: number, teamId: string) {
-    if (submitted) return;
-    const nextPicks = { ...picks, [gameNumber]: teamId };
+    if (submitted || actualWinnerPicks[gameNumber]) return;
+    const nextPicks = {
+      ...picks,
+      ...actualWinnerPicks,
+      [gameNumber]: teamId,
+    };
     const nextChallenge = buildBracketChallenge({
       games,
       teams: challengeTeams,
@@ -1449,9 +1532,9 @@ function BracketChallenge({
   }
 
   function goToNextPick() {
-    if (!nextOpenGame) return;
-    setActiveBracket(nextOpenGame.game.bracket);
-    setFocusGameNumber(nextOpenGame.game.game_number);
+    if (!nextDecision) return;
+    setActiveBracket(nextDecision.game.bracket);
+    setFocusGameNumber(nextDecision.game.game_number);
   }
 
   async function submitBracket() {
@@ -1461,18 +1544,18 @@ function BracketChallenge({
     }
     if (!challenge.isComplete) {
       setMessage(
-        `Finish every matchup first (${challenge.completedPicks}/${challenge.totalPicks}).`
+        `Finish the remaining bracket path first (${challenge.completedPicks}/${challenge.totalPicks} decisions). Started games earn no points but may need a path assumption until their official result is posted.`
       );
       goToNextPick();
       return;
     }
     if (!status.submissionOpen) {
-      setMessage("Bracket submissions are not open yet.");
+      setMessage("No unstarted playoff games remain available for a new bracket.");
       return;
     }
     if (
       !window.confirm(
-        `Submit this bracket for ${status.entryFee} Rhino Coins? Submitted brackets cannot be edited.`
+        `Submit this bracket for ${status.entryFee} Rhino Coins? ${status.maxAvailablePoints || 0} still-unstarted games can earn points. Submitted brackets cannot be edited.`
       )
     ) {
       return;
@@ -1510,12 +1593,13 @@ function BracketChallenge({
               Rhino Bracket Challenge
             </p>
             <h3 className="mt-2 text-3xl font-black text-white md:text-4xl">
-              Pick every matchup. Own the bracket.
+              Join anytime. Chase the remaining points.
             </h3>
             <p className="mt-3 max-w-2xl leading-7 text-white/65">
               One submitted bracket costs 100 Rhino Coins. Each correct winner
-              earns one point, and the top bracket takes the full pot. Tied
-              leaders split it.
+              earns one point only if that game had not started when the bracket
+              was submitted. The top bracket takes the full pot; tied leaders
+              split it.
             </p>
           </div>
 
@@ -1524,7 +1608,12 @@ function BracketChallenge({
               ["Entry", `${status.entryFee} 🦏`],
               ["Pot", `${status.pot} 🦏`],
               ["Entries", status.entryCount],
-              ["Your picks", `${challenge.completedPicks}/${challenge.totalPicks}`],
+              [
+                submitted ? "Your max" : "Points open",
+                submitted
+                  ? `${status.myEntry?.maxPoints || 0} pts`
+                  : `${status.maxAvailablePoints || 0} pts`,
+              ],
             ].map(([label, value]) => (
               <div
                 key={String(label)}
@@ -1543,10 +1632,12 @@ function BracketChallenge({
           <button
             type="button"
             onClick={goToNextPick}
-            disabled={!nextOpenGame || submitted}
+            disabled={!nextDecision || submitted}
             className="rounded-full border border-[#72D8BF]/30 bg-[#72D8BF]/10 px-5 py-3 font-black text-[#BFF4E7] transition hover:bg-[#72D8BF]/20 disabled:opacity-40"
           >
-            {nextOpenGame ? `Next open pick · G${nextOpenGame.game.game_number}` : "All picks complete"}
+            {nextDecision
+              ? `Next decision · G${nextDecision.game.game_number}`
+              : "All decisions complete"}
           </button>
           <button
             type="button"
@@ -1584,10 +1675,29 @@ function BracketChallenge({
               ? `Live score: ${status.myEntry?.liveScore || 0}`
               : status.message ||
                 (status.submissionOpen
-                  ? "Submissions close when the first playoff game begins."
-                  : "Submissions wait for final standings and the official playoff schedule.")}
+                  ? `${status.maxAvailablePoints || 0} points remain available. The next game locks${
+                      status.nextLockAt
+                        ? ` ${formatLeagueDateTime(status.nextLockAt)}`
+                        : " at its scheduled start"
+                    }.`
+                  : "New brackets close only when no unstarted playoff games remain.")}
           </span>
         </div>
+
+        {!submitted && status.submissionOpen && (
+          <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+            <p className="rounded-2xl border border-[#1F8A70]/30 bg-[#1F8A70]/10 p-4 text-[#D8FFF5]">
+              <span className="font-black">Scoring picks:</span>{" "}
+              {completedScoringPicks}/{status.maxAvailablePoints || 0} future
+              games selected.
+            </p>
+            <p className="rounded-2xl border border-[#C4963E]/30 bg-[#C4963E]/10 p-4 text-[#F3EEE6]">
+              <span className="font-black">Path only:</span> started games can
+              still be selected to connect the bracket, but they cannot earn a
+              point.
+            </p>
+          </div>
+        )}
 
         {message && (
           <p className="mt-4 rounded-2xl border border-[#72D8BF]/25 bg-[#72D8BF]/10 p-4 text-[#D8FFF5]">
@@ -1642,6 +1752,9 @@ function BracketChallenge({
           predictionResults={activeResults}
           onPredictionPick={pickWinner}
           predictionLocked={submitted}
+          predictionOpenGameNumbers={openGameNumberSet}
+          predictionResolvedGameNumbers={resolvedGameNumberSet}
+          predictionEntryEligibleGameNumbers={entryEligibleGameNumberSet}
         />
       </section>
 
@@ -1658,7 +1771,7 @@ function BracketChallenge({
                   #{leader.rank} {leader.displayName}
                 </p>
                 <p className="font-black text-[#72D8BF]">
-                  {leader.score} correct
+                  {leader.score}/{leader.maxPoints} correct
                 </p>
               </div>
             ))}

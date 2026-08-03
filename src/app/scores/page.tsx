@@ -49,7 +49,7 @@ export default async function ScoresPage() {
           <GameCard
             key={game.id}
             game={{ ...game, game_type: "playoff", league: "playoff" }}
-            showComments={false}
+            showComments
           />
         ))}
       </div>

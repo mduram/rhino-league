@@ -24,11 +24,13 @@ export default function CommentsSection({
   targetId,
   title = "Comments",
   defaultOpen = false,
+  deferLoad = false,
 }: {
   targetType: "photo" | "game";
   targetId: string;
   title?: string;
   defaultOpen?: boolean;
+  deferLoad?: boolean;
 }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [authorName, setAuthorName] = useState("");
@@ -45,10 +47,56 @@ export default function CommentsSection({
     [targetType, targetId]
   );
 
+  async function loadComments() {
+    if (!targetId) return;
+
+    setIsLoading(true);
+    setMessage("");
+
+    const params = new URLSearchParams({
+      targetType,
+      targetId,
+    });
+
+    const res = await fetch(`/api/comments?${params.toString()}`, {
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(data.error || "Could not load comments.");
+      setIsLoading(false);
+      setHasLoadedOnce(true);
+      return;
+    }
+
+    setComments(sortCommentsChronologically(data.comments || []));
+    setIsLoading(false);
+    setHasLoadedOnce(true);
+  }
+
   useEffect(() => {
-    loadComments();
+    if (deferLoad) return;
+
+    const timer = window.setTimeout(() => {
+      loadComments();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetType, targetId]);
+  }, [targetType, targetId, deferLoad]);
+
+  useEffect(() => {
+    if (!deferLoad || !isOpen || hasLoadedOnce || isLoading) return;
+
+    const timer = window.setTimeout(() => {
+      loadComments();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deferLoad, isOpen, hasLoadedOnce, isLoading]);
 
   useEffect(() => {
     function openFromHash() {
@@ -83,35 +131,6 @@ export default function CommentsSection({
       window.removeEventListener("hashchange", openFromHash);
     };
   }, [comments, commentsSectionId]);
-
-  async function loadComments() {
-    if (!targetId) return;
-
-    setIsLoading(true);
-    setMessage("");
-
-    const params = new URLSearchParams({
-      targetType,
-      targetId,
-    });
-
-    const res = await fetch(`/api/comments?${params.toString()}`, {
-      cache: "no-store",
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setMessage(data.error || "Could not load comments.");
-      setIsLoading(false);
-      setHasLoadedOnce(true);
-      return;
-    }
-
-    setComments(sortCommentsChronologically(data.comments || []));
-    setIsLoading(false);
-    setHasLoadedOnce(true);
-  }
 
   async function postComment(e: React.FormEvent) {
     e.preventDefault();

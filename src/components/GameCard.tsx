@@ -46,10 +46,14 @@ export default function GameCard({
   game,
   showPoll = false,
   showComments = true,
+  deferComments = false,
+  commentsDefaultOpen = false,
 }: {
   game: any;
   showPoll?: boolean;
   showComments?: boolean;
+  deferComments?: boolean;
+  commentsDefaultOpen?: boolean;
 }) {
   const isCompleted = game.status === "completed";
   const isUnscheduled = game.status === "unscheduled";
@@ -60,6 +64,7 @@ export default function GameCard({
 
   const homeName = homeTeam?.name || game.home_source || "TBD";
   const awayName = awayTeam?.name || game.away_source || "TBD";
+  const canPoll = Boolean(homeTeam?.id && awayTeam?.id);
 
   const leagueGlow =
     isPlayoff
@@ -174,9 +179,10 @@ export default function GameCard({
           )}
         </div>
 
-        {showPoll && !isCompleted && !isUnscheduled && (
+        {showPoll && canPoll && !isCompleted && !isUnscheduled && (
           <GamePoll
             gameId={game.id}
+            gameType={isPlayoff ? "playoff" : "regular"}
             homeTeamName={homeName}
             awayTeamName={awayName}
             initialHomeVotes={game.home_votes || 0}
@@ -189,6 +195,8 @@ export default function GameCard({
             targetType="game"
             targetId={game.id}
             title="Match comments"
+            deferLoad={deferComments}
+            defaultOpen={commentsDefaultOpen}
           />
         )}
       </div>

@@ -307,7 +307,8 @@ export default function ScheduleCalendar({ games }: { games: any[] }) {
 
           <GameCard
             game={selectedGame}
-            showComments={selectedGame.game_type !== "playoff"}
+            showPoll
+            showComments
           />
         </div>
       )}

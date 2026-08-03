@@ -46,6 +46,7 @@ type BracketGame = {
   away_source?: string | null;
   home_score?: number | null;
   away_score?: number | null;
+  winner_team_id?: string | null;
   home_team?: BracketTeam | BracketTeam[] | null;
   away_team?: BracketTeam | BracketTeam[] | null;
   provisional_home_team?: Standing | null;
@@ -145,6 +146,7 @@ export default async function PlayoffsPage() {
       away_source,
       home_score,
       away_score,
+      winner_team_id,
       home_team:teams!playoff_games_home_team_id_fkey(id, name, league, logo_url),
       away_team:teams!playoff_games_away_team_id_fkey(id, name, league, logo_url),
       winner_team:teams!playoff_games_winner_team_id_fkey(id, name, league, logo_url),

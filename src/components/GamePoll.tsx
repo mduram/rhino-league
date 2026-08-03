@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function GamePoll({
   gameId,
@@ -8,12 +8,14 @@ export default function GamePoll({
   awayTeamName,
   initialHomeVotes,
   initialAwayVotes,
+  gameType = "regular",
 }: {
   gameId: string;
   homeTeamName: string;
   awayTeamName: string;
   initialHomeVotes: number;
   initialAwayVotes: number;
+  gameType?: "regular" | "playoff";
 }) {
   const [homeVotes, setHomeVotes] = useState(initialHomeVotes || 0);
   const [awayVotes, setAwayVotes] = useState(initialAwayVotes || 0);
@@ -21,6 +23,26 @@ export default function GamePoll({
   const [isVoting, setIsVoting] = useState(false);
 
   const totalVotes = homeVotes + awayVotes;
+
+  useEffect(() => {
+    if (gameType !== "playoff") return;
+
+    let active = true;
+    const params = new URLSearchParams({ gameId, gameType });
+
+    fetch(`/api/games/vote?${params.toString()}`, { cache: "no-store" })
+      .then(async (res) => ({ res, data: await res.json() }))
+      .then(({ res, data }) => {
+        if (!active || !res.ok) return;
+        setHomeVotes(Number(data.home_votes || 0));
+        setAwayVotes(Number(data.away_votes || 0));
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, [gameId, gameType]);
 
   const homePercent =
     totalVotes === 0 ? 0 : Math.round((homeVotes / totalVotes) * 100);
@@ -32,7 +54,7 @@ export default function GamePoll({
     setIsVoting(true);
     setMessage("");
 
-    const alreadyVotedKey = `rhino_vote_${gameId}`;
+    const alreadyVotedKey = `rhino_vote_${gameType}_${gameId}`;
 
     if (localStorage.getItem(alreadyVotedKey)) {
       setMessage("You already voted on this game.");
@@ -45,7 +67,7 @@ export default function GamePoll({
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ gameId, side }),
+      body: JSON.stringify({ gameId, gameType, side }),
     });
 
     const data = await res.json();

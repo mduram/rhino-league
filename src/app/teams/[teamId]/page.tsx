@@ -380,8 +380,8 @@ export default async function TeamPage({
             <GameCard
               key={game.id}
               game={game}
-              showPoll={game.game_type !== "playoff"}
-              showComments={game.game_type !== "playoff"}
+              showPoll
+              showComments
             />
           ))}
 
@@ -412,7 +412,7 @@ export default async function TeamPage({
             <GameCard
               key={game.id}
               game={game}
-              showComments={game.game_type !== "playoff"}
+              showComments
             />
           ))}
 

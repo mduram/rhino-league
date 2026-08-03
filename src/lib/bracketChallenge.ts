@@ -1,4 +1,6 @@
 export const BRACKET_CHALLENGE_ENTRY_FEE = 100;
+export const BRACKET_CHALLENGE_ELIGIBLE_GAMES_KEY =
+  "__eligibleGameNumbers";
 
 export type BracketChallengeTeam = {
   id: string;
@@ -14,9 +16,13 @@ export type BracketChallengeGame = {
   round_label: string;
   home_source?: string | null;
   away_source?: string | null;
+  winner_team_id?: string | null;
+  status?: string;
+  scheduled_at?: string | null;
 };
 
 export type BracketChallengePicks = Record<number, string>;
+export type StoredBracketChallengePicks = Record<string, unknown>;
 
 export type BracketChallengeResult = {
   game: BracketChallengeGame;
@@ -145,15 +151,75 @@ export function scoreBracketChallenge({
   picks,
   actualWinners,
 }: {
-  picks: Record<string, string> | BracketChallengePicks;
+  picks: StoredBracketChallengePicks | BracketChallengePicks;
   actualWinners: Map<number, string>;
 }) {
   let score = 0;
-  const normalizedPicks = picks as Record<string, string>;
+  const normalizedPicks = picks as StoredBracketChallengePicks;
+  const eligibleGameNumbers = getBracketChallengeEligibleGameNumbers(picks);
 
   actualWinners.forEach((winnerTeamId, gameNumber) => {
-    if (normalizedPicks[String(gameNumber)] === winnerTeamId) score += 1;
+    if (
+      eligibleGameNumbers.has(gameNumber) &&
+      normalizedPicks[String(gameNumber)] === winnerTeamId
+    ) {
+      score += 1;
+    }
   });
 
   return score;
+}
+
+export function makeStoredBracketChallengePicks({
+  picks,
+  eligibleGameNumbers,
+}: {
+  picks: BracketChallengePicks;
+  eligibleGameNumbers: number[];
+}) {
+  return {
+    ...picks,
+    [BRACKET_CHALLENGE_ELIGIBLE_GAMES_KEY]: [
+      ...new Set(eligibleGameNumbers),
+    ].sort((a, b) => a - b),
+  } satisfies StoredBracketChallengePicks;
+}
+
+export function getBracketChallengeNumericPicks(
+  picks: StoredBracketChallengePicks | BracketChallengePicks
+) {
+  return Object.fromEntries(
+    Object.entries(picks || {})
+      .filter(
+        ([gameNumber, teamId]) =>
+          /^\d+$/.test(gameNumber) && typeof teamId === "string"
+      )
+      .map(([gameNumber, teamId]) => [Number(gameNumber), String(teamId)])
+  ) as BracketChallengePicks;
+}
+
+export function getBracketChallengeEligibleGameNumbers(
+  picks: StoredBracketChallengePicks | BracketChallengePicks
+) {
+  const normalizedPicks = picks as StoredBracketChallengePicks;
+  const storedEligible =
+    normalizedPicks[BRACKET_CHALLENGE_ELIGIBLE_GAMES_KEY];
+
+  if (Array.isArray(storedEligible)) {
+    return new Set(
+      storedEligible
+        .map(Number)
+        .filter((gameNumber) => Number.isInteger(gameNumber) && gameNumber > 0)
+    );
+  }
+
+  // Entries submitted before rolling locks were introduced earned points for
+  // every numeric pick, preserving their original maximum score.
+  return new Set(Object.keys(getBracketChallengeNumericPicks(picks)).map(Number));
+}
+
+export function getBracketChallengeMaxPoints(
+  picks: StoredBracketChallengePicks | BracketChallengePicks
+) {
+  return getBracketChallengeEligibleGameNumbers(picks).size;
 }

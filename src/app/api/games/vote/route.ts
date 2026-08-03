@@ -24,10 +24,62 @@ function hashValue(value: string) {
     .digest("hex");
 }
 
+type GameType = "regular" | "playoff";
+
+function normalizeGameType(value: unknown): GameType | null {
+  if (value === undefined || value === null || value === "regular") {
+    return "regular";
+  }
+
+  return value === "playoff" ? "playoff" : null;
+}
+
+function gameTable(gameType: GameType) {
+  return gameType === "playoff" ? "playoff_games" : "games";
+}
+
+function voteGameIdColumn(gameType: GameType) {
+  return gameType === "playoff" ? "playoff_game_id" : "game_id";
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const gameId = searchParams.get("gameId");
+  const gameType = normalizeGameType(searchParams.get("gameType"));
+
+  if (!gameId || !gameType) {
+    return NextResponse.json(
+      { error: "A valid game ID and game type are required." },
+      { status: 400 }
+    );
+  }
+
+  const { data: game, error } = await supabaseAdmin
+    .from(gameTable(gameType))
+    .select("id, home_votes, away_votes")
+    .eq("id", gameId)
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!game) {
+    return NextResponse.json({ error: "Game not found." }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    success: true,
+    home_votes: Number(game.home_votes || 0),
+    away_votes: Number(game.away_votes || 0),
+  });
+}
+
 export async function POST(request: Request) {
   const body = await request.json();
 
   const { gameId, side } = body;
+  const gameType = normalizeGameType(body.gameType);
 
   if (!gameId) {
     return NextResponse.json(
@@ -43,6 +95,13 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!gameType) {
+    return NextResponse.json(
+      { error: "Game type must be regular or playoff." },
+      { status: 400 }
+    );
+  }
+
   const clientIp = getClientIp(request);
   const userAgent = request.headers.get("user-agent") || "unknown";
 
@@ -52,7 +111,7 @@ export async function POST(request: Request) {
   const { data: existingVote, error: existingVoteError } = await supabaseAdmin
     .from("poll_votes")
     .select("id, side")
-    .eq("game_id", gameId)
+    .eq(voteGameIdColumn(gameType), gameId)
     .eq("ip_hash", ipHash)
     .maybeSingle();
 
@@ -75,7 +134,7 @@ export async function POST(request: Request) {
   }
 
   const { data: game, error: gameError } = await supabaseAdmin
-    .from("games")
+    .from(gameTable(gameType))
     .select("id, home_votes, away_votes")
     .eq("id", gameId)
     .maybeSingle();
@@ -94,10 +153,14 @@ export async function POST(request: Request) {
     );
   }
 
+  const voteTarget =
+    gameType === "playoff"
+      ? { playoff_game_id: gameId }
+      : { game_id: gameId };
   const { error: voteInsertError } = await supabaseAdmin
     .from("poll_votes")
     .insert({
-      game_id: gameId,
+      ...voteTarget,
       side,
       ip_hash: ipHash,
       user_agent_hash: userAgentHash,
@@ -134,7 +197,7 @@ export async function POST(request: Request) {
       : Number(game.away_votes || 0);
 
   const { data: updatedGame, error: updateError } = await supabaseAdmin
-    .from("games")
+    .from(gameTable(gameType))
     .update({
       home_votes: nextHomeVotes,
       away_votes: nextAwayVotes,

@@ -90,36 +90,65 @@ function formatGameTime(value: string | null) {
 }
 
 export default async function PollsPage() {
-  const { data: teams, error: teamsError } = await supabase
-    .from("teams")
-    .select("id, name, league, logo_url")
-    .order("name", { ascending: true });
+  const [teamsResult, gamesResult, playoffGamesResult] = await Promise.all([
+    supabase
+      .from("teams")
+      .select("id, name, league, logo_url")
+      .order("name", { ascending: true }),
+    supabase
+      .from("games")
+      .select(`
+        id,
+        scheduled_at,
+        location,
+        status,
+        home_score,
+        away_score,
+        home_votes,
+        away_votes,
+        league,
+        home_team_id,
+        away_team_id,
+        home_team:teams!games_home_team_id_fkey(id, name, league, logo_url),
+        away_team:teams!games_away_team_id_fkey(id, name, league, logo_url)
+      `)
+      .in("status", ["scheduled", "completed"])
+      .order("scheduled_at", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("playoff_games")
+      .select(`
+        id,
+        game_number,
+        bracket,
+        round_label,
+        scheduled_at,
+        location,
+        status,
+        home_score,
+        away_score,
+        home_source,
+        away_source,
+        home_team_id,
+        away_team_id,
+        home_team:teams!playoff_games_home_team_id_fkey(id, name, league, logo_url),
+        away_team:teams!playoff_games_away_team_id_fkey(id, name, league, logo_url)
+      `)
+      .in("status", ["pending", "scheduled"])
+      .gt("scheduled_at", new Date().toISOString())
+      .not("home_team_id", "is", null)
+      .not("away_team_id", "is", null)
+      .order("scheduled_at", { ascending: true }),
+  ]);
 
-  const { data: allGames, error: gamesError } = await supabase
-    .from("games")
-    .select(`
-      id,
-      scheduled_at,
-      location,
-      status,
-      home_score,
-      away_score,
-      home_votes,
-      away_votes,
-      league,
-      home_team_id,
-      away_team_id,
-      home_team:teams!games_home_team_id_fkey(id, name, league, logo_url),
-      away_team:teams!games_away_team_id_fkey(id, name, league, logo_url)
-    `)
-    .in("status", ["scheduled", "completed"])
-    .order("scheduled_at", { ascending: true, nullsFirst: false });
+  const { data: teams, error: teamsError } = teamsResult;
+  const { data: allGames, error: gamesError } = gamesResult;
+  const { data: playoffGames, error: playoffGamesError } = playoffGamesResult;
 
-  if (teamsError || gamesError) {
+  if (teamsError || gamesError || playoffGamesError) {
     return (
       <PageShell title="Polls">
         <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-300">
-          {teamsError?.message || gamesError?.message}
+          {teamsError?.message || gamesError?.message || playoffGamesError?.message}
         </div>
       </PageShell>
     );
@@ -132,6 +161,13 @@ export default async function PollsPage() {
   const scheduledGames = normalizedGames.filter(
     (game) => game.status === "scheduled"
   );
+  const scheduledPlayoffGames = (playoffGames || []).map((game) => ({
+    ...game,
+    game_type: "playoff",
+    league: "playoff",
+    home_votes: 0,
+    away_votes: 0,
+  }));
 
   const teamStats = new Map<
     string,
@@ -281,7 +317,7 @@ export default async function PollsPage() {
   return (
     <PageShell
       title="Polls"
-      subtitle="Vote on upcoming games, track the hottest teams, and see the current favorite vs underdog for each matchup."
+      subtitle="Vote on upcoming regular-season and playoff games, track the hottest teams, and see the current favorite vs underdog for each matchup."
     >
       <div className="grid gap-8">
         <section className="rounded-3xl border border-[#C4963E]/30 bg-[#C4963E]/10 p-6 shadow-2xl shadow-black/30">
@@ -344,8 +380,29 @@ export default async function PollsPage() {
         </section>
 
         <section>
+          <h2 className="mb-2 text-3xl font-black text-[#BFF4E7]">
+            Playoff Polls
+          </h2>
+          <p className="mb-4 text-red-100/60">
+            Vote on playoff matchups as soon as both teams are known.
+          </p>
+
+          <div className="grid gap-5">
+            {scheduledPlayoffGames.map((game) => (
+              <GameCard key={game.id} game={game} showPoll showComments />
+            ))}
+
+            {scheduledPlayoffGames.length === 0 && (
+              <p className="rounded-2xl border border-[#1F8A70]/30 bg-[#1F8A70]/10 p-5 text-[#BFF4E7]/70">
+                The next playoff poll opens when both teams in the matchup are known.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section>
           <h2 className="mb-4 text-3xl font-black text-[#F3EEE6]">
-            Active Game Polls
+            Regular-Season Polls
           </h2>
 
           <div className="grid gap-5">
@@ -404,7 +461,7 @@ export default async function PollsPage() {
 
             {gamesWithPredictions.length === 0 && (
               <p className="rounded-2xl border border-[#A51C30]/25 bg-[#230B12]/70 p-5 text-red-100/60">
-                No active polls right now because no games are scheduled.
+                The regular season is complete. Playoff polls are listed above.
               </p>
             )}
           </div>

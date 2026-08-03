@@ -3,9 +3,14 @@ import { NextResponse } from "next/server";
 import {
   BRACKET_CHALLENGE_ENTRY_FEE,
   buildBracketChallenge,
+  getBracketChallengeEligibleGameNumbers,
+  getBracketChallengeMaxPoints,
+  getBracketChallengeNumericPicks,
+  makeStoredBracketChallengePicks,
   scoreBracketChallenge,
   type BracketChallengeGame,
   type BracketChallengePicks,
+  type StoredBracketChallengePicks,
   type BracketChallengeTeam,
 } from "@/lib/bracketChallenge";
 import { SEASON_PHASE } from "@/lib/seasonPhase";
@@ -93,36 +98,56 @@ async function getChallengeBracket() {
     })
     .filter(Boolean) as BracketChallengeTeam[];
 
-  const firstStart = (games || [])
-    .map((game) => game.scheduled_at)
-    .filter(Boolean)
-    .map((value: string) => new Date(value).getTime())
-    .sort((a: number, b: number) => a - b)[0];
-
   return {
-    games: (games || []) as (BracketChallengeGame & {
-      winner_team_id?: string | null;
-      status?: string;
-      scheduled_at?: string | null;
-    })[],
+    games: (games || []) as BracketChallengeGame[],
     teams,
-    firstStart: Number.isFinite(firstStart) ? firstStart : null,
     officialGenerated: Boolean(settings?.is_generated),
     bracketVersion: `${SEASON_PHASE.year}:${settings?.updated_at || "official"}`,
   };
 }
 
-function isSubmissionOpen(
-  firstStart: number | null,
-  officialGenerated: boolean
-) {
+function getSubmissionWindow(games: BracketChallengeGame[]) {
+  const now = Date.now();
+  const requiredGames = games.filter(
+    (game) => game.home_source !== "BYE" && game.away_source !== "BYE"
+  );
+  const openGames = requiredGames.filter((game) => {
+    const startsAt = game.scheduled_at
+      ? new Date(game.scheduled_at).getTime()
+      : Number.NaN;
+
+    return (
+      !game.winner_team_id &&
+      Number.isFinite(startsAt) &&
+      startsAt > now
+    );
+  });
+  const openGameNumberSet = new Set(
+    openGames.map((game) => game.game_number)
+  );
+
+  return {
+    openGameNumbers: openGames.map((game) => game.game_number),
+    lockedGameNumbers: requiredGames
+      .filter((game) => !openGameNumberSet.has(game.game_number))
+      .map((game) => game.game_number),
+    nextLockAt:
+      openGames
+        .map((game) => game.scheduled_at)
+        .filter((value): value is string => Boolean(value))
+        .sort(
+          (a, b) => new Date(a).getTime() - new Date(b).getTime()
+        )[0] || null,
+  };
+}
+
+function isSubmissionOpen(openGameCount: number, officialGenerated: boolean) {
   return Boolean(
     SEASON_PHASE.regularSeasonComplete &&
       SEASON_PHASE.playoffSchedulePublished &&
       SEASON_PHASE.playoffBracketChallengeOpen &&
       officialGenerated &&
-      firstStart &&
-      Date.now() < firstStart
+      openGameCount > 0
   );
 }
 
@@ -148,8 +173,8 @@ export async function GET(request: Request) {
 
   try {
     const user = await getUserFromRequest(request);
-    const { games, firstStart, officialGenerated } =
-      await getChallengeBracket();
+    const { games, officialGenerated } = await getChallengeBracket();
+    const submissionWindow = getSubmissionWindow(games);
     const { data: entries, error: entriesError } = await supabaseAdmin
       .from("playoff_bracket_entries")
       .select(
@@ -189,9 +214,17 @@ export async function GET(request: Request) {
       .map((entry) => ({
         ...entry,
         liveScore: scoreBracketChallenge({
-          picks: (entry.picks || {}) as Record<string, string>,
+          picks: (entry.picks || {}) as StoredBracketChallengePicks,
           actualWinners,
         }),
+        maxPoints: getBracketChallengeMaxPoints(
+          (entry.picks || {}) as StoredBracketChallengePicks
+        ),
+        eligibleGameNumbers: [
+          ...getBracketChallengeEligibleGameNumbers(
+            (entry.picks || {}) as StoredBracketChallengePicks
+          ),
+        ],
         displayName: profilesById[entry.user_id] || "Anonymous Rhino",
       }))
       .sort((a, b) => {
@@ -205,10 +238,18 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       entryFee: BRACKET_CHALLENGE_ENTRY_FEE,
-      submissionOpen: isSubmissionOpen(firstStart, officialGenerated),
+      submissionOpen: isSubmissionOpen(
+        submissionWindow.openGameNumbers.length,
+        officialGenerated
+      ),
       schedulePublished: true,
       standingsFinal: true,
-      locksAt: firstStart ? new Date(firstStart).toISOString() : null,
+      locksAt: submissionWindow.nextLockAt,
+      nextLockAt: submissionWindow.nextLockAt,
+      openGameNumbers: submissionWindow.openGameNumbers,
+      lockedGameNumbers: submissionWindow.lockedGameNumbers,
+      maxAvailablePoints: submissionWindow.openGameNumbers.length,
+      actualWinners: Object.fromEntries(actualWinners),
       entryCount: scoredEntries.length,
       pot: scoredEntries.reduce(
         (total, entry) => total + Number(entry.entry_fee || 0),
@@ -219,6 +260,7 @@ export async function GET(request: Request) {
         rank: index + 1,
         displayName: entry.displayName,
         score: entry.liveScore,
+        maxPoints: entry.maxPoints,
         status: entry.status,
         payout: Number(entry.payout || 0),
       })),
@@ -261,33 +303,60 @@ export async function POST(request: Request) {
     const { picks } = (await request.json()) as {
       picks?: BracketChallengePicks;
     };
-    const { games, teams, firstStart, officialGenerated, bracketVersion } =
+    const { games, teams, officialGenerated, bracketVersion } =
       await getChallengeBracket();
+    const submissionWindow = getSubmissionWindow(games);
 
-    if (!isSubmissionOpen(firstStart, officialGenerated)) {
+    if (
+      !isSubmissionOpen(
+        submissionWindow.openGameNumbers.length,
+        officialGenerated
+      )
+    ) {
       return NextResponse.json(
         {
           error:
-            "Bracket submissions are closed or the final bracket has not been published yet.",
+            "Bracket submissions are closed because no unstarted playoff games remain, or the final bracket has not been published yet.",
         },
         { status: 423 }
       );
     }
 
+    const actualWinnerPicks = Object.fromEntries(
+      games
+        .filter((game) => game.winner_team_id)
+        .map((game) => [game.game_number, String(game.winner_team_id)])
+    ) as BracketChallengePicks;
+
     const challenge = buildBracketChallenge({
       games,
       teams,
-      picks: picks || {},
+      picks: {
+        ...getBracketChallengeNumericPicks(picks || {}),
+        ...actualWinnerPicks,
+      },
     });
+    const openGameNumberSet = new Set(submissionWindow.openGameNumbers);
+    const completedOpenPicks = challenge.results.filter(
+      (result) =>
+        openGameNumberSet.has(result.game.game_number) &&
+        result.requiresPick &&
+        result.hasValidPick
+    ).length;
 
-    if (!challenge.isComplete) {
+    if (completedOpenPicks !== submissionWindow.openGameNumbers.length) {
       return NextResponse.json(
         {
-          error: `Complete every matchup before submitting (${challenge.completedPicks}/${challenge.totalPicks}).`,
+          error: `Complete every still-open matchup before submitting (${completedOpenPicks}/${submissionWindow.openGameNumbers.length}). Locked games can be selected only to build your future path and earn no points.`,
         },
         { status: 400 }
       );
     }
+
+    const storedPicks = makeStoredBracketChallengePicks({
+      picks: challenge.validPicks,
+      eligibleGameNumbers: submissionWindow.openGameNumbers,
+    });
 
     const { data, error } = await supabaseAdmin.rpc(
       "submit_playoff_bracket_entry",
@@ -295,7 +364,7 @@ export async function POST(request: Request) {
         p_user_id: user.id,
         p_season_year: SEASON_PHASE.year,
         p_bracket_version: bracketVersion,
-        p_picks: challenge.validPicks,
+        p_picks: storedPicks,
         p_entry_fee: BRACKET_CHALLENGE_ENTRY_FEE,
       }
     );
@@ -311,7 +380,8 @@ export async function POST(request: Request) {
       entryId: submission?.entry_id,
       rhinoCoins: submission?.remaining_coins,
       entryFee: BRACKET_CHALLENGE_ENTRY_FEE,
-      message: "Bracket submitted. Your 100 Rhino Coins are in the prize pot.",
+      maxPoints: submissionWindow.openGameNumbers.length,
+      message: `Bracket submitted for up to ${submissionWindow.openGameNumbers.length} points. Your 100 Rhino Coins are in the prize pot.`,
     });
   } catch (error: unknown) {
     return NextResponse.json(

@@ -88,23 +88,15 @@ function formatTargetLabel({
 
 function getCommentHref({
   comment,
-  gamesById,
 }: {
   comment: any;
-  gamesById: Record<string, any>;
 }) {
   if (comment.target_type === "photo") {
     return `/photos#comment-${comment.id}`;
   }
 
   if (comment.target_type === "game") {
-    const game = gamesById[comment.target_id];
-
-    if (game?.status === "completed") {
-      return `/scores#comment-${comment.id}`;
-    }
-
-    return `/polls#comment-${comment.id}`;
+    return `/games/${comment.target_id}#comment-${comment.id}`;
   }
 
   return `/whats-new#comment-${comment.id}`;
@@ -219,7 +211,34 @@ export default async function WhatsNewPage() {
     .order("scheduled_at", { ascending: false })
     .limit(200);
 
-  if (commentsError || photosError || completedGamesError || pollGamesError) {
+  const { data: playoffGames, error: playoffGamesError } = await supabaseAdmin
+    .from("playoff_games")
+    .select(`
+      id,
+      game_number,
+      bracket,
+      round_label,
+      scheduled_at,
+      location,
+      status,
+      home_score,
+      away_score,
+      home_source,
+      away_source,
+      home_team_id,
+      away_team_id,
+      home_team:teams!playoff_games_home_team_id_fkey(id, name, logo_url),
+      away_team:teams!playoff_games_away_team_id_fkey(id, name, logo_url)
+    `)
+    .limit(100);
+
+  if (
+    commentsError ||
+    photosError ||
+    completedGamesError ||
+    pollGamesError ||
+    playoffGamesError
+  ) {
     return (
       <PageShell
         title="What’s New?"
@@ -229,7 +248,8 @@ export default async function WhatsNewPage() {
           {commentsError?.message ||
             photosError?.message ||
             completedGamesError?.message ||
-            pollGamesError?.message}
+            pollGamesError?.message ||
+            playoffGamesError?.message}
         </div>
       </PageShell>
     );
@@ -239,14 +259,21 @@ export default async function WhatsNewPage() {
   const safePhotos = photos || [];
   const safeCompletedGames = completedGames || [];
   const safePollGames = pollGames || [];
+  const safePlayoffGames = (playoffGames || []).map((game) => ({
+    ...game,
+    game_type: "playoff",
+    league: "playoff",
+  }));
 
   const allGamesById = new Map<string, any>();
 
-  [...safeCompletedGames, ...safePollGames].forEach((game: any) => {
-    if (!allGamesById.has(game.id)) {
-      allGamesById.set(game.id, game);
+  [...safeCompletedGames, ...safePollGames, ...safePlayoffGames].forEach(
+    (game: any) => {
+      if (!allGamesById.has(game.id)) {
+        allGamesById.set(game.id, game);
+      }
     }
-  });
+  );
 
   const photosById = Object.fromEntries(
     safePhotos.map((photo: any) => [photo.id, photo])
@@ -306,7 +333,6 @@ export default async function WhatsNewPage() {
       createdAt: comment.created_at,
       href: getCommentHref({
         comment,
-        gamesById,
       }),
       heat: Math.max(1, Number(comment.score || 0) + 1 + (isToday ? 4 : 0)),
       meta: {
@@ -377,7 +403,7 @@ export default async function WhatsNewPage() {
         ? `Forfeit by ${forfeitingTeam?.name || "unknown team"}`
         : "Final score posted",
       createdAt: game.scheduled_at,
-      href: `/scores#comments-game-${game.id}`,
+      href: `/games/${game.id}#comments-game-${game.id}`,
       heat,
       game,
       meta: {
@@ -413,7 +439,7 @@ export default async function WhatsNewPage() {
         subtitle: "Upcoming match",
         body: "People are voting/commenting on this matchup",
         createdAt: game.scheduled_at,
-        href: `/polls#comments-game-${game.id}`,
+        href: `/games/${game.id}#comments-game-${game.id}`,
         heat,
         game,
         meta: {
