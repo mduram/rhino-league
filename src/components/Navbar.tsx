@@ -7,6 +7,7 @@ const primaryLinks = [
   { href: "/playoffs", label: "Playoffs" },
   { href: "/streams", label: "Streams" },
   { href: "/whats-new", label: "What’s New?" },
+  { href: "/teams", label: "Teams" },
   { href: "/schedule", label: "Schedule" },
   { href: "/scores", label: "Scores" },
   { href: "/submit-scores", label: "Submit Scores" },
@@ -15,7 +16,6 @@ const primaryLinks = [
 
 const leagueLinks = [
   { href: "/standings", label: "Standings" },
-  { href: "/teams", label: "Teams" },
   { href: "/photos", label: "Photos" },
   { href: "/polls", label: "Polls" },
 ];
@@ -93,6 +93,8 @@ export default function Navbar() {
                     ? "nav-streams-pill bg-[#9146FF] text-white shadow-lg shadow-[#9146FF]/20 hover:bg-[#772CE8]"
                     : link.href === "/whats-new"
                       ? "nav-whats-new-pill bg-[#2F80ED] text-white shadow-lg shadow-[#2F80ED]/20 hover:bg-[#2568C2]"
+                    : link.href === "/teams"
+                      ? "nav-teams-pill bg-[#FF2448] text-white shadow-lg shadow-[#FF2448]/30 hover:bg-[#FF4966]"
                   : "text-red-100/75 hover:bg-[#A51C30]/25 hover:text-white"
               }`}
             >
@@ -198,6 +200,8 @@ export default function Navbar() {
                     ? "nav-streams-pill border-[#9146FF] bg-[#9146FF] text-white"
                     : link.href === "/whats-new"
                       ? "nav-whats-new-pill border-[#2F80ED] bg-[#2F80ED] text-white"
+                    : link.href === "/teams"
+                      ? "nav-teams-pill border-[#FF2448] bg-[#FF2448] text-white"
                   : "border-[#A51C30]/25 bg-[#A51C30]/10 text-red-100/80"
               }`}
             >

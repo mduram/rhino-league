@@ -80,11 +80,11 @@ export default async function SchedulePage() {
   ].sort((a, b) => {
     const aTime = a.scheduled_at
       ? new Date(a.scheduled_at).getTime()
-      : Number.MAX_SAFE_INTEGER;
+      : Number.MIN_SAFE_INTEGER;
     const bTime = b.scheduled_at
       ? new Date(b.scheduled_at).getTime()
-      : Number.MAX_SAFE_INTEGER;
-    return aTime - bTime;
+      : Number.MIN_SAFE_INTEGER;
+    return bTime - aTime;
   });
 
   return (
@@ -97,11 +97,11 @@ export default async function SchedulePage() {
 
         <section>
           <h2 className="mb-4 text-2xl font-black text-[#F3EEE6]">
-            Full Schedule List
+            Full Schedule List · Latest First
           </h2>
 
           <div className="grid gap-5">
-            {scheduledGames.map((game: any) => (
+            {scheduledGames.map((game) => (
               <GameCard
                 key={game.id}
                 game={game}

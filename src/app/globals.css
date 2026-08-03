@@ -156,6 +156,17 @@ textarea {
   background-color: #2568c2 !important;
 }
 
+.nav-teams-pill {
+  border-color: #ff2448 !important;
+  background-color: #ff2448 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(255, 36, 72, 0.3);
+}
+
+.nav-teams-pill:hover {
+  background-color: #ff4966 !important;
+}
+
 .safari-select {
   -webkit-appearance: menulist-button;
   appearance: auto;
