@@ -57,7 +57,9 @@ export async function POST(request: Request) {
 
   const { data: game, error: gameError } = await supabaseAdmin
     .from("playoff_games")
-    .select("id, scheduled_at, status, home_team_id, away_team_id")
+    .select(
+      "id, scheduled_at, status, home_team_id, away_team_id, home_votes, away_votes"
+    )
     .eq("id", gameId)
     .maybeSingle();
 
@@ -98,8 +100,8 @@ export async function POST(request: Request) {
 
   const market = calculateMarket({
     gameId,
-    homeVotes: 0,
-    awayVotes: 0,
+    homeVotes: Number(game.home_votes || 0),
+    awayVotes: Number(game.away_votes || 0),
     bets: (existingBets || []).map((bet) => ({
       side: bet.side as "home" | "away",
       amount: Number(bet.amount || 0),

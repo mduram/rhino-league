@@ -32,6 +32,8 @@ export async function GET() {
       status,
       home_team_id,
       away_team_id,
+      home_votes,
+      away_votes,
       home_team:teams!playoff_games_home_team_id_fkey(id, name, logo_url, league),
       away_team:teams!playoff_games_away_team_id_fkey(id, name, logo_url, league)
     `)
@@ -65,8 +67,8 @@ export async function GET() {
   for (const game of games || []) {
     marketsByGameId[game.id] = calculateMarket({
       gameId: game.id,
-      homeVotes: 0,
-      awayVotes: 0,
+      homeVotes: Number(game.home_votes || 0),
+      awayVotes: Number(game.away_votes || 0),
       bets: bets
         .filter((bet) => bet.playoff_game_id === game.id)
         .map((bet) => ({

@@ -848,6 +848,9 @@ function PlayoffMarketsSection({
           <h2 className="mt-2 text-3xl font-black text-white">
             Pick the next winner
           </h2>
+          <p className="mt-2 text-sm text-white/50">
+            Odds blend matchup poll votes with Rhino Coin market activity.
+          </p>
         </div>
         <span
           className={`rounded-full border px-4 py-2 text-sm font-black ${

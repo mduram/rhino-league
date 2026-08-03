@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 
+import GameCard from "@/components/GameCard";
 import TeamLogo from "@/components/TeamLogo";
 import {
   BRACKET_CHALLENGE_ENTRY_FEE,
@@ -49,6 +50,8 @@ type BracketGame = {
   away_source?: string | null;
   home_score?: number | null;
   away_score?: number | null;
+  home_votes?: number | null;
+  away_votes?: number | null;
   winner_team_id?: string | null;
   home_team?: BracketTeam | BracketTeam[] | null;
   away_team?: BracketTeam | BracketTeam[] | null;
@@ -726,6 +729,7 @@ function BracketView({
   focusGameNumber,
   currentGameNumber,
   onNavigateToGame,
+  onGameSelect,
   predictionResults = [],
   onPredictionPick,
   predictionLocked = false,
@@ -743,6 +747,7 @@ function BracketView({
   focusGameNumber?: number;
   currentGameNumber?: number;
   onNavigateToGame: (game: BracketGame) => void;
+  onGameSelect?: (game: BracketGame | null) => void;
   predictionResults?: BracketChallengeResult[];
   onPredictionPick?: (gameNumber: number, teamId: string) => void;
   predictionLocked?: boolean;
@@ -1203,9 +1208,13 @@ function BracketView({
                 isCurrentGame={currentGameNumber === game.game_number}
                 selected={selectedGameNumber === game.game_number}
                 onSelect={() => {
-                  setSelectedGameNumber((current) =>
-                    current === game.game_number ? null : game.game_number
-                  );
+                  const nextGameNumber =
+                    selectedGameNumber === game.game_number
+                      ? null
+                      : game.game_number;
+
+                  setSelectedGameNumber(nextGameNumber);
+                  onGameSelect?.(nextGameNumber === null ? null : game);
                   setActiveRoundIndex(position.roundIndex);
                 }}
                 left={position.x}
@@ -1244,10 +1253,96 @@ function BracketView({
 
 const EMPTY_GAME_NUMBERS = new Set<number>();
 
+function BracketGameDetailsDialog({
+  game,
+  onClose,
+}: {
+  game: BracketGame;
+  onClose: () => void;
+}) {
+  const hasOfficialGame = Boolean(game.id);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] overflow-y-auto bg-black/80 p-4 backdrop-blur-sm md:p-8"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Game ${game.game_number} match center`}
+        className="mx-auto w-full max-w-3xl rounded-[2rem] border border-[#C4963E]/35 bg-[#16070B] p-4 shadow-2xl shadow-black/60 md:p-6"
+      >
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#C4963E]">
+              Game {game.game_number} · Match center
+            </p>
+            <p className="mt-1 text-sm font-bold text-red-100/55">
+              Schedule, poll, and comments
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close match center"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.06] text-xl font-black text-white transition hover:bg-white/15"
+          >
+            ×
+          </button>
+        </div>
+
+        {!hasOfficialGame && (
+          <p className="mb-4 rounded-2xl border border-[#C4963E]/25 bg-[#C4963E]/10 p-4 text-sm font-bold text-[#F3EEE6]/75">
+            Polls and comments unlock when this matchup becomes official.
+          </p>
+        )}
+
+        <GameCard
+          game={{
+            ...game,
+            game_type: "playoff",
+            league: "playoff",
+            home_votes: Number(game.home_votes || 0),
+            away_votes: Number(game.away_votes || 0),
+            submitted_score_pending: false,
+          }}
+          showPoll={hasOfficialGame}
+          showComments={hasOfficialGame}
+          commentsDefaultOpen={hasOfficialGame}
+        />
+
+        {game.id && (
+          <Link
+            href={`/games/${game.id}`}
+            className="mt-4 block rounded-2xl border border-[#C4963E]/30 bg-[#C4963E]/10 px-5 py-3 text-center text-sm font-black text-[#F3EEE6] transition hover:bg-[#C4963E]/20"
+          >
+            Open this match on its own page →
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ActualBracket({ games }: { games: BracketGame[] }) {
   const [activeBracket, setActiveBracket] =
     useState<BracketGame["bracket"]>("winners");
   const [focusGameNumber, setFocusGameNumber] = useState<number | undefined>();
+  const [selectedMatch, setSelectedMatch] = useState<BracketGame | null>(null);
 
   const activeGames = games.filter((game) => game.bracket === activeBracket);
   const activeRounds =
@@ -1289,6 +1384,7 @@ function ActualBracket({ games }: { games: BracketGame[] }) {
               onClick={() => {
                 setActiveBracket(bracket.key);
                 setFocusGameNumber(undefined);
+                setSelectedMatch(null);
               }}
               aria-pressed={activeBracket === bracket.key}
               className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition ${
@@ -1302,7 +1398,7 @@ function ActualBracket({ games }: { games: BracketGame[] }) {
           ))}
         </div>
         <p className="shrink-0 text-xs font-bold text-white/45">
-          Fixed bracket · recorded results only
+          Fixed bracket · click a game for its match center
         </p>
       </div>
 
@@ -1318,7 +1414,15 @@ function ActualBracket({ games }: { games: BracketGame[] }) {
             : undefined
         }
         onNavigateToGame={navigateToGame}
+        onGameSelect={setSelectedMatch}
       />
+
+      {selectedMatch && (
+        <BracketGameDetailsDialog
+          game={selectedMatch}
+          onClose={() => setSelectedMatch(null)}
+        />
+      )}
     </section>
   );
 }
