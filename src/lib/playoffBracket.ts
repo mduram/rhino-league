@@ -55,6 +55,20 @@ const PLAYABLE_GAME_NUMBERS = [
   57, 58, 59, 60,
 ];
 
+const PLAYOFF_BLACKOUT_DATES = new Set([
+  "2026-08-12", // Court unavailable for the VWR Summer Event.
+  "2026-08-27", // Rest day before the medal matches.
+]);
+
+const PLAYOFF_EARLY_SLOT_DATES = new Set([
+  "2026-08-03",
+  "2026-08-04",
+  "2026-08-05",
+  "2026-08-13",
+  "2026-08-14",
+  "2026-08-17",
+]);
+
 export const PLAYOFF_GAME_DEFINITIONS: PlayoffGameDefinition[] = [
   {
     gameNumber: 1,
@@ -558,11 +572,13 @@ function makeEasternTimestamp(dateKey: string, hour: number, minute = 0) {
 function getPlayoffScheduleMap() {
   const scheduledAtByGameNumber: Record<number, string> = {};
 
-  const weekdays = getWeekdaysBetween("2026-08-03", "2026-08-27");
+  const weekdays = getWeekdaysBetween("2026-08-03", "2026-08-27").filter(
+    (dateKey) => !PLAYOFF_BLACKOUT_DATES.has(dateKey)
+  );
   const slots: string[] = [];
 
-  weekdays.forEach((dateKey, index) => {
-    if (index < 3) {
+  weekdays.forEach((dateKey) => {
+    if (PLAYOFF_EARLY_SLOT_DATES.has(dateKey)) {
       slots.push(makeEasternTimestamp(dateKey, 9));
     }
 

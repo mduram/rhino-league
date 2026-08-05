@@ -18,6 +18,22 @@ const TIME_SLOTS = [
   { label: "4–5pm", hour: 16 },
 ];
 
+const CALENDAR_DAY_BLOCKS: Record<
+  string,
+  { title: string; detail: string; slotLabel: string }
+> = {
+  "2026-08-12": {
+    title: "VWR Summer Event",
+    detail: "Court unavailable all day",
+    slotLabel: "Court unavailable",
+  },
+  "2026-08-27": {
+    title: "Playoff Rest Day",
+    detail: "No games scheduled",
+    slotLabel: "Rest day",
+  },
+};
+
 function pad2(value: number) {
   return String(value).padStart(2, "0");
 }
@@ -196,16 +212,35 @@ export default function ScheduleCalendar({ games }: { games: any[] }) {
           <div className="grid grid-cols-[110px_repeat(5,minmax(140px,1fr))] gap-2">
             <div />
 
-            {weekDays.map((dayKey) => (
-              <div
-                key={dayKey}
-                className="rounded-xl border border-[#A51C30]/20 bg-black/20 p-3 text-center"
-              >
-                <p className="font-black text-white">
-                  {formatDateKeyHeader(dayKey)}
-                </p>
-              </div>
-            ))}
+            {weekDays.map((dayKey) => {
+              const dayBlock = CALENDAR_DAY_BLOCKS[dayKey];
+
+              return (
+                <div
+                  key={dayKey}
+                  className={
+                    dayBlock
+                      ? "rounded-xl border border-[#C4963E]/55 bg-[#C4963E]/15 p-3 text-center"
+                      : "rounded-xl border border-[#A51C30]/20 bg-black/20 p-3 text-center"
+                  }
+                >
+                  <p className="font-black text-white">
+                    {formatDateKeyHeader(dayKey)}
+                  </p>
+
+                  {dayBlock && (
+                    <>
+                      <p className="mt-1 text-xs font-black uppercase tracking-[0.12em] text-[#F3C969]">
+                        {dayBlock.title}
+                      </p>
+                      <p className="mt-1 text-[11px] font-bold text-red-100/60">
+                        {dayBlock.detail}
+                      </p>
+                    </>
+                  )}
+                </div>
+              );
+            })}
 
             {TIME_SLOTS.map((slot) => (
               <div
@@ -222,9 +257,26 @@ export default function ScheduleCalendar({ games }: { games: any[] }) {
                   const dayDate = makeUtcDateFromDateKey(dayKey);
                   const isFriday = dayDate.getUTCDay() === 5;
                   const isFridayPickup = isFriday && slot.hour >= 16;
+                  const dayBlock = CALENDAR_DAY_BLOCKS[dayKey];
 
                   const slotKey = `${dayKey}_${slot.hour}`;
                   const slotGames = gamesBySlot.get(slotKey) || [];
+
+                  if (dayBlock) {
+                    return (
+                      <div
+                        key={slotKey}
+                        className="min-h-24 rounded-xl border border-[#C4963E]/30 bg-[#C4963E]/10 p-3"
+                      >
+                        <p className="text-sm font-black text-[#F3C969]">
+                          {dayBlock.slotLabel}
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-red-100/45">
+                          {dayBlock.title}
+                        </p>
+                      </div>
+                    );
+                  }
 
                   if (isFridayPickup && slotGames.length === 0) {
                     return (
