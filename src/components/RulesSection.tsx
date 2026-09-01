@@ -203,6 +203,17 @@ const RULES = [
     ),
   },
   {
+    title: "Player Eligibility",
+    short:
+      "Players must have a Harvard ID or have played in the Rhino League in a previous year.",
+    body: (
+      <p>
+        Only players who have a Harvard ID or have played in the Rhino League
+        in a previous year are eligible to play.
+      </p>
+    ),
+  },
+  {
     title: "Rosters",
     short: "You can only play for one team during the season.",
     body: (
@@ -214,10 +225,9 @@ const RULES = [
         </p>
 
         <p>
-          This is really the only rule regarding who can play on what team, and
-          this openness is one of the more charming things about the Rhino
-          League. With that freedom comes the responsibility to uphold the spirit
-          of the league.
+          Within the league&apos;s eligibility requirements, teams have the freedom
+          to build their own rosters. With that freedom comes the responsibility
+          to uphold the spirit of the league.
         </p>
       </>
     ),

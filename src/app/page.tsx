@@ -308,6 +308,22 @@ export default async function HomePage() {
           id="announcements"
           className="mt-8 grid gap-5 lg:grid-cols-[1.35fr_0.65fr]"
         >
+          <article className="relative overflow-hidden rounded-[2rem] border border-[#A51C30]/55 bg-[#A51C30]/15 p-6 shadow-2xl shadow-black/30 lg:col-span-2 md:p-7">
+            <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#A51C30]/25 blur-3xl" />
+            <div className="relative">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-red-100">
+                Important eligibility update
+              </p>
+              <h2 className="mt-2 text-3xl font-black text-white">
+                Harvard ID or prior Rhino League experience required
+              </h2>
+              <p className="mt-2 max-w-3xl leading-7 text-red-100/70">
+                Only players who have a Harvard ID or have played in the Rhino
+                League in a previous year are allowed to play.
+              </p>
+            </div>
+          </article>
+
           <Link
             href="/playoffs"
             className="group relative overflow-hidden rounded-[2rem] border border-[#C4963E]/35 bg-[#C4963E]/10 p-6 shadow-2xl shadow-black/25 transition hover:bg-[#C4963E]/16 lg:col-span-2 md:p-7"
