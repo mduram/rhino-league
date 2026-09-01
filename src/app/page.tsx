@@ -312,7 +312,7 @@ export default async function HomePage() {
             <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#A51C30]/25 blur-3xl" />
             <div className="relative">
               <p className="text-sm font-black uppercase tracking-[0.25em] text-red-100">
-                Important eligibility update
+                Eligibility rule
               </p>
               <h2 className="mt-2 text-3xl font-black text-white">
                 Harvard ID or prior Rhino League experience required
