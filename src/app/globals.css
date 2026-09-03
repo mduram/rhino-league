@@ -278,57 +278,110 @@ textarea {
 }
 
 .neon-support-rail {
-  stroke: rgba(77, 20, 31, 0.96);
-  stroke-width: 5px;
+  fill: none;
+  stroke: #13090c;
+  stroke-width: 7px;
   stroke-linecap: round;
+  opacity: 0.5;
   filter:
-    drop-shadow(0 2px 1px rgba(0, 0, 0, 0.95))
-    drop-shadow(0 0 5px rgba(153, 14, 38, 0.32));
+    drop-shadow(0 3px 2px rgba(0, 0, 0, 0.95))
+    drop-shadow(0 0 3px rgba(91, 12, 26, 0.22));
+}
+
+.neon-support-rail-highlight {
+  fill: none;
+  stroke: rgba(95, 37, 48, 0.5);
+  stroke-width: 0.9px;
+  stroke-linecap: round;
+  opacity: 0.38;
+}
+
+.neon-cable-shadow,
+.neon-hanging-wire-shadow,
+.neon-letter-cable,
+.neon-cable-highlight,
+.neon-hanging-wire,
+.neon-hanging-wire-highlight {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.neon-cable-shadow,
+.neon-hanging-wire-shadow {
+  stroke: rgba(2, 1, 1, 0.96);
+  stroke-width: 4px;
+  filter:
+    drop-shadow(1px 2px 1px rgba(0, 0, 0, 0.95))
+    drop-shadow(0 0 1px rgba(92, 8, 23, 0.28));
 }
 
 .neon-letter-cable,
 .neon-hanging-wire {
-  fill: none;
-  stroke: rgba(222, 31, 63, 0.94);
-  stroke-width: 2.6px;
-  stroke-linecap: round;
-  filter:
-    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.95))
-    drop-shadow(0 0 4px rgba(225, 31, 65, 0.72));
+  stroke: #64101f;
+  stroke-width: 2.2px;
+}
+
+.neon-cable-highlight,
+.neon-hanging-wire-highlight {
+  stroke: rgba(211, 55, 79, 0.52);
+  stroke-width: 0.6px;
 }
 
 .neon-cable-clamp {
-  fill: #2c080f;
-  stroke: rgba(218, 28, 60, 0.92);
-  stroke-width: 1.8px;
-  filter: drop-shadow(0 0 3px rgba(225, 31, 65, 0.56));
+  fill: #0c0708;
+  stroke: rgba(75, 43, 48, 0.95);
+  stroke-width: 1.5px;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.9));
 }
 
 .neon-cable-clamp-broken {
-  fill: #6f1022;
+  fill: #291016;
+  stroke: #8e2639;
+}
+
+.neon-cable-bolt {
+  fill: #8e3a49;
+  opacity: 0.62;
+}
+
+.neon-cable-sleeve {
+  fill: #12090b;
+  stroke: #53111d;
+  stroke-width: 1.1px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
+}
+
+.neon-broken-sleeve {
+  fill: #350a12;
+  stroke: #b32640;
+}
+
+.neon-snapped-cable {
+  opacity: 0.62;
 }
 
 .neon-hanging-wire {
-  stroke-width: 2.4px;
-  transform-box: fill-box;
-  transform-origin: 50% 0%;
-  animation: hanging-wire-sway 6s ease-in-out infinite;
+  stroke: #98182f;
+  stroke-width: 2.6px;
 }
 
-.neon-letter-hanging-base,
-.neon-letter-hanging {
-  transform-box: fill-box;
-  transform-origin: 8% 4%;
+.neon-hanging-wire-highlight {
+  stroke: rgba(242, 73, 99, 0.68);
+  stroke-width: 0.75px;
 }
 
-.neon-letter-hanging-base {
-  animation: hanging-letter-sway 6s ease-in-out infinite;
+.neon-cable-fray {
+  fill: none;
+  stroke: rgba(184, 66, 87, 0.82);
+  stroke-width: 0.9px;
+  stroke-linecap: round;
 }
 
-.neon-tube-lit.neon-letter-hanging {
-  animation:
-    broken-neon-flicker 14.5s steps(1, end) -9.4s infinite,
-    hanging-letter-sway 6s ease-in-out infinite;
+.neon-hanging-rig {
+  transform-box: view-box;
+  transform-origin: 995px 10px;
+  animation: hanging-rig-sway 6s cubic-bezier(0.45, 0.04, 0.55, 0.96) infinite;
+  will-change: transform;
 }
 
 .neon-letter-9 {
@@ -339,25 +392,14 @@ textarea {
     drop-shadow(0 0 12px rgba(155, 7, 32, 0.62));
 }
 
-@keyframes hanging-letter-sway {
+@keyframes hanging-rig-sway {
   0%,
   100% {
-    transform: translate(-8px, 18px) rotate(-8deg);
+    transform: rotate(-6.5deg);
   }
 
   50% {
-    transform: translate(14px, 18px) rotate(10deg);
-  }
-}
-
-@keyframes hanging-wire-sway {
-  0%,
-  100% {
-    transform: rotate(-5deg);
-  }
-
-  50% {
-    transform: rotate(5deg);
+    transform: rotate(6.5deg);
   }
 }
 
@@ -561,13 +603,8 @@ textarea {
     animation: none;
   }
 
-  .neon-letter-hanging-base,
-  .neon-tube-lit.neon-letter-hanging {
+  .neon-hanging-rig {
     animation: none;
-    transform: translate(3px, 18px) rotate(1deg);
-  }
-
-  .neon-hanging-wire {
-    animation: none;
+    transform: rotate(3deg);
   }
 }

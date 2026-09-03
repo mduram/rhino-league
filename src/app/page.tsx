@@ -28,54 +28,48 @@ function BrokenNeonTitle() {
       role="img"
       aria-label="No champion"
     >
-      <line
+      <path
         aria-hidden="true"
         className="neon-support-rail"
-        x1="25"
-        y1="8"
-        x2="1055"
-        y2="8"
+        d="M 966 8 C 997 7 1033 9 1065 8"
       />
-
-      <g className="neon-letter-cables" aria-hidden="true">
-        {NEON_GLYPHS.slice(0, -1).map(({ letter, x }, index) => (
-          <g key={`${letter}-${index}-cable`}>
-            <circle className="neon-cable-clamp" cx={x} cy="8" r="3" />
-            <line
-              className="neon-letter-cable"
-              x1={x}
-              y1="10"
-              x2={x}
-              y2="41"
-            />
-          </g>
-        ))}
-      </g>
+      <path
+        aria-hidden="true"
+        className="neon-support-rail-highlight"
+        d="M 969 5.6 C 998 4.8 1033 6.5 1062 5.7"
+      />
 
       <circle
         aria-hidden="true"
         className="neon-cable-clamp neon-cable-clamp-broken"
-        cx="1012"
+        cx="995"
         cy="8"
-        r="3"
+        r="2.8"
       />
-      <line
+      <circle
         aria-hidden="true"
-        className="neon-hanging-wire"
-        x1="1012"
-        y1="10"
-        x2="1012"
-        y2="55"
+        className="neon-cable-bolt"
+        cx="995"
+        cy="8"
+        r="0.8"
       />
 
+      <g className="neon-snapped-cable" aria-hidden="true">
+        <circle className="neon-cable-clamp" cx="1053" cy="8" r="2.6" />
+        <circle className="neon-cable-bolt" cx="1053" cy="8" r="0.8" />
+        <path className="neon-cable-shadow" d="M 1053 11 C 1051 19 1056 27 1052 35" />
+        <path className="neon-letter-cable" d="M 1053 11 C 1051 19 1056 27 1052 35" />
+        <path className="neon-cable-highlight" d="M 1052.5 11 C 1050.5 19 1055.5 27 1051.5 35" />
+        <path className="neon-cable-fray" d="M 1052 35 l -2 5 M 1052 35 l 2 4 M 1052 35 l 0.5 5" />
+      </g>
+
       <g className="neon-tube-unlit" aria-hidden="true">
-        {NEON_GLYPHS.map(({ letter, x }, index) => (
+        {NEON_GLYPHS.slice(0, -1).map(({ letter, x }, index) => (
           <text
             key={`${letter}-${index}`}
             x={x}
             y="145"
             textAnchor="middle"
-            className={index === 9 ? "neon-letter-hanging-base" : undefined}
           >
             {letter}
           </text>
@@ -83,7 +77,7 @@ function BrokenNeonTitle() {
       </g>
 
       <g aria-hidden="true">
-        {NEON_GLYPHS.map(({ letter, x, dash, offset }, index) => (
+        {NEON_GLYPHS.slice(0, -1).map(({ letter, x, dash, offset }, index) => (
           <text
             key={`${letter}-${index}`}
             x={x}
@@ -91,13 +85,47 @@ function BrokenNeonTitle() {
             textAnchor="middle"
             strokeDasharray={dash}
             strokeDashoffset={offset}
-            className={`neon-tube-lit neon-letter-${index} ${
-              index === 9 ? "neon-letter-hanging" : ""
-            }`}
+            className={`neon-tube-lit neon-letter-${index}`}
           >
             {letter}
           </text>
         ))}
+      </g>
+
+      <g className="neon-hanging-rig" aria-hidden="true">
+        <path
+          className="neon-hanging-wire-shadow"
+          d="M 995 11 C 997 24 992 42 995 58"
+        />
+        <path
+          className="neon-hanging-wire"
+          d="M 995 11 C 997 24 992 42 995 58"
+        />
+        <path
+          className="neon-hanging-wire-highlight"
+          d="M 994.45 11 C 996.45 24 991.45 42 994.45 58"
+        />
+        <circle className="neon-cable-sleeve neon-broken-sleeve" cx="995" cy="58" r="3" />
+        <g transform="rotate(10 995 58)">
+          <text
+            x="1024"
+            y="164"
+            textAnchor="middle"
+            className="neon-tube-unlit"
+          >
+            N
+          </text>
+          <text
+            x="1024"
+            y="164"
+            textAnchor="middle"
+            strokeDasharray={NEON_GLYPHS[9].dash}
+            strokeDashoffset={NEON_GLYPHS[9].offset}
+            className="neon-tube-lit neon-letter-9"
+          >
+            N
+          </text>
+        </g>
       </g>
     </svg>
   );
