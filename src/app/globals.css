@@ -222,7 +222,7 @@ textarea {
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.95));
   transform-box: fill-box;
   transform-origin: 50% 0%;
-  animation: hanging-wire-sway 5.2s ease-in-out infinite;
+  animation: hanging-wire-sway 6s ease-in-out infinite;
 }
 
 .neon-hanging-mount {
@@ -238,13 +238,13 @@ textarea {
 }
 
 .neon-letter-hanging-base {
-  animation: hanging-letter-sway 5.2s ease-in-out infinite;
+  animation: hanging-letter-sway 6s ease-in-out infinite;
 }
 
 .neon-tube-lit.neon-letter-hanging {
   animation:
     broken-neon-flicker 14.5s steps(1, end) -9.4s infinite,
-    hanging-letter-sway 5.2s ease-in-out infinite;
+    hanging-letter-sway 6s ease-in-out infinite;
 }
 
 @keyframes hanging-letter-sway {
