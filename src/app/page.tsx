@@ -1,6 +1,12 @@
+import { connection } from "next/server";
+
+import AnnouncementCountdown from "@/components/AnnouncementCountdown";
 import CommentsSection from "@/components/CommentsSection";
 
 const ANNOUNCEMENT_COMMENT_ID = "20260000-0000-4000-8000-000000000001";
+const ANNOUNCEMENT_RELEASE_AT = new Date(
+  "2026-09-04T17:00:00-04:00"
+).getTime();
 const NEON_GLYPHS = [
   { letter: "N", x: 58, dash: "108 7 54 5 82 10", offset: 4 },
   { letter: "O", x: 164, dash: "78 6 118 11 47 5", offset: 22 },
@@ -70,7 +76,17 @@ function BrokenNeonTitle() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  await connection();
+
+  // This page is explicitly request-time rendered so wall-clock release logic is stable.
+  // eslint-disable-next-line react-hooks/purity
+  const isAnnouncementReleased = Date.now() >= ANNOUNCEMENT_RELEASE_AT;
+
+  if (!isAnnouncementReleased) {
+    return <AnnouncementCountdown releaseAt={ANNOUNCEMENT_RELEASE_AT} />;
+  }
+
   return (
     <main className="shelved-site relative min-h-screen overflow-hidden px-5 py-10 text-[#EDE8E5] sm:px-8 sm:py-20">
       <div aria-hidden className="ominous-grain pointer-events-none fixed inset-0" />
