@@ -51,6 +51,108 @@ textarea {
   color: #ffffff;
 }
 
+.shelved-site {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(139, 9, 31, 0.34), transparent 48rem),
+    radial-gradient(ellipse at 10% 70%, rgba(81, 3, 16, 0.18), transparent 38rem),
+    linear-gradient(180deg, #070405 0%, #030303 42%, #050203 100%);
+}
+
+.shelved-site::after {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  box-shadow: inset 0 0 180px 45px rgba(0, 0, 0, 0.96);
+}
+
+.ominous-grain {
+  z-index: 1;
+  opacity: 0.22;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.025) 0,
+      rgba(255, 255, 255, 0.025) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(124, 8, 25, 0.018) 0,
+      rgba(124, 8, 25, 0.018) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+}
+
+.ominous-panel {
+  box-shadow:
+    0 36px 100px rgba(0, 0, 0, 0.9),
+    0 0 70px rgba(108, 5, 22, 0.12),
+    inset 0 0 80px rgba(91, 3, 18, 0.08);
+}
+
+.ominous-panel::before,
+.ominous-panel::after {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  content: "";
+  background: linear-gradient(90deg, transparent, #9f142a 16%, #3b050e 84%, transparent);
+  box-shadow: 0 0 16px rgba(177, 18, 43, 0.48);
+}
+
+.ominous-panel::before {
+  top: -1px;
+}
+
+.ominous-panel::after {
+  bottom: -1px;
+}
+
+.ominous-title {
+  text-shadow:
+    0 3px 0 #250208,
+    0 0 22px rgba(177, 18, 43, 0.38),
+    0 0 70px rgba(177, 18, 43, 0.2);
+}
+
+.verdict-panel {
+  background:
+    linear-gradient(135deg, rgba(94, 4, 20, 0.54), rgba(12, 2, 4, 0.92)),
+    #100306;
+  box-shadow:
+    inset 0 0 55px rgba(135, 8, 29, 0.18),
+    0 0 32px rgba(100, 5, 21, 0.16);
+}
+
+.shelved-comments > section {
+  border-color: rgba(111, 13, 30, 0.68);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.68);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7);
+}
+
+@keyframes omen-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+.omen-pulse {
+  animation: omen-pulse 2.8s ease-in-out infinite;
+}
+
 .playoff-hero {
   background: #16070b;
   isolation: isolate;
@@ -205,5 +307,9 @@ textarea {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .omen-pulse {
+    animation: none;
   }
 }
