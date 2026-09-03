@@ -1,6 +1,74 @@
 import CommentsSection from "@/components/CommentsSection";
 
 const ANNOUNCEMENT_COMMENT_ID = "20260000-0000-4000-8000-000000000001";
+const NEON_GLYPHS = [
+  { letter: "N", x: 58, dash: "108 7 54 5 82 10", offset: 4 },
+  { letter: "O", x: 164, dash: "78 6 118 11 47 5", offset: 22 },
+  { letter: "C", x: 333, dash: "91 8 42 5 112 10", offset: 11 },
+  { letter: "H", x: 439, dash: "62 5 127 9 48 7", offset: 31 },
+  { letter: "A", x: 544, dash: "105 9 51 6 75 5", offset: 17 },
+  { letter: "M", x: 657, dash: "74 5 96 11 64 7", offset: 39 },
+  { letter: "P", x: 773, dash: "117 8 38 5 91 10", offset: 8 },
+  { letter: "I", x: 848, dash: "56 6 83 9 45 5", offset: 26 },
+  { letter: "O", x: 923, dash: "84 5 109 12 42 6", offset: 14 },
+  { letter: "N", x: 1024, dash: "69 7 121 10 51 5", offset: 35 },
+];
+
+function BrokenNeonTitle() {
+  return (
+    <svg
+      className="ominous-title mt-3 block w-full overflow-visible"
+      viewBox="0 0 1080 190"
+      role="img"
+      aria-label="No champion"
+    >
+      <path
+        aria-hidden="true"
+        className="neon-hanging-wire"
+        d="M972 4 C968 15 973 25 981 38"
+      />
+      <circle
+        aria-hidden="true"
+        className="neon-hanging-mount"
+        cx="972"
+        cy="5"
+        r="4"
+      />
+
+      <g className="neon-tube-unlit" aria-hidden="true">
+        {NEON_GLYPHS.map(({ letter, x }, index) => (
+          <text
+            key={`${letter}-${index}`}
+            x={x}
+            y="145"
+            textAnchor="middle"
+            className={index === 9 ? "neon-letter-hanging-base" : undefined}
+          >
+            {letter}
+          </text>
+        ))}
+      </g>
+
+      <g aria-hidden="true">
+        {NEON_GLYPHS.map(({ letter, x, dash, offset }, index) => (
+          <text
+            key={`${letter}-${index}`}
+            x={x}
+            y="145"
+            textAnchor="middle"
+            strokeDasharray={dash}
+            strokeDashoffset={offset}
+            className={`neon-tube-lit neon-letter-${index} ${
+              index === 9 ? "neon-letter-hanging" : ""
+            }`}
+          >
+            {letter}
+          </text>
+        ))}
+      </g>
+    </svg>
+  );
+}
 
 export default function HomePage() {
   return (
@@ -24,9 +92,7 @@ export default function HomePage() {
               <span className="block text-sm font-semibold tracking-[0.25em] text-white/45 sm:text-base">
                 The 2026 season ends with
               </span>
-              <span className="ominous-title mt-3 block font-serif text-5xl font-black leading-none tracking-[-0.045em] text-[#E7E0DC] sm:text-7xl lg:text-8xl">
-                No champion
-              </span>
+              <BrokenNeonTitle />
             </h1>
             <p className="mt-7 font-mono text-xs uppercase tracking-[0.18em] text-white/30">
               September 3, 2026 · Final determination
