@@ -1,22 +1,14 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 
 import "./globals.css";
-
-import Navbar from "@/components/Navbar";
-import SupportPrompt from "@/components/SupportPrompt";
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
-  title: "The Rhino League · 2026 Playoffs",
+  title: "The Rhino League · 2026 Season Announcement",
   description:
-    "Harvard Rhino League playoff brackets, live streams, standings, schedules, scores, and Rhino Coin predictions.",
-
-  other: {
-    "google-adsense-account": "ca-pub-7191954180081880",
-  },
+    "An official announcement regarding the conclusion of the 2026 Rhino League season.",
 };
 
 export default function RootLayout({
@@ -27,23 +19,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Navbar />
-
         {children}
-
-        <SupportPrompt />
-
         <SpeedInsights />
         <Analytics />
       </body>
-
-      <Script
-        id="google-adsense"
-        async
-        strategy="afterInteractive"
-        crossOrigin="anonymous"
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7191954180081880"
-      />
     </html>
   );
 }
