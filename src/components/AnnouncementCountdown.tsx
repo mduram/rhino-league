@@ -79,7 +79,7 @@ export default function AnnouncementCountdown({
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-white/55 sm:text-lg">
-          Friday, September 4 at 5:00 PM Eastern Time
+          Tonight at 8:00 PM Eastern Time
         </p>
 
         <div

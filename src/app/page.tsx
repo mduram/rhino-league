@@ -5,7 +5,7 @@ import CommentsSection from "@/components/CommentsSection";
 
 const ANNOUNCEMENT_COMMENT_ID = "20260000-0000-4000-8000-000000000001";
 const ANNOUNCEMENT_RELEASE_AT = new Date(
-  "2026-09-04T17:00:00-04:00"
+  "2026-09-03T20:00:00-04:00"
 ).getTime();
 const NEON_GLYPHS = [
   { letter: "N", x: 58, dash: "108 7 54 5 82 10", offset: 4 },
@@ -17,7 +17,7 @@ const NEON_GLYPHS = [
   { letter: "P", x: 773, dash: "117 8 38 5 91 10", offset: 8 },
   { letter: "I", x: 848, dash: "56 6 83 9 45 5", offset: 26 },
   { letter: "O", x: 923, dash: "84 5 109 12 42 6", offset: 14 },
-  { letter: "N", x: 1024, dash: "69 7 121 10 51 5", offset: 35 },
+  { letter: "N", x: 1024, dash: "42 24 31 20 48 28", offset: 17 },
 ];
 
 function BrokenNeonTitle() {
@@ -28,17 +28,44 @@ function BrokenNeonTitle() {
       role="img"
       aria-label="No champion"
     >
-      <path
+      <line
         aria-hidden="true"
-        className="neon-hanging-wire"
-        d="M972 4 C968 15 973 25 981 38"
+        className="neon-support-rail"
+        x1="25"
+        y1="8"
+        x2="1055"
+        y2="8"
       />
+
+      <g className="neon-letter-cables" aria-hidden="true">
+        {NEON_GLYPHS.slice(0, -1).map(({ letter, x }, index) => (
+          <g key={`${letter}-${index}-cable`}>
+            <circle className="neon-cable-clamp" cx={x} cy="8" r="3" />
+            <line
+              className="neon-letter-cable"
+              x1={x}
+              y1="10"
+              x2={x}
+              y2="41"
+            />
+          </g>
+        ))}
+      </g>
+
       <circle
         aria-hidden="true"
-        className="neon-hanging-mount"
-        cx="972"
-        cy="5"
-        r="4"
+        className="neon-cable-clamp neon-cable-clamp-broken"
+        cx="1012"
+        cy="8"
+        r="3"
+      />
+      <line
+        aria-hidden="true"
+        className="neon-hanging-wire"
+        x1="1012"
+        y1="10"
+        x2="1012"
+        y2="55"
       />
 
       <g className="neon-tube-unlit" aria-hidden="true">
@@ -76,12 +103,23 @@ function BrokenNeonTitle() {
   );
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string | string[] }>;
+}) {
   await connection();
+
+  const { preview } = await searchParams;
+  const previewValue = Array.isArray(preview) ? preview[0] : preview;
+  const isLocalAnnouncementPreview =
+    process.env.NODE_ENV === "development" && previewValue === "announcement";
 
   // This page is explicitly request-time rendered so wall-clock release logic is stable.
   // eslint-disable-next-line react-hooks/purity
-  const isAnnouncementReleased = Date.now() >= ANNOUNCEMENT_RELEASE_AT;
+  const requestTime = Date.now();
+  const isAnnouncementReleased =
+    isLocalAnnouncementPreview || requestTime >= ANNOUNCEMENT_RELEASE_AT;
 
   if (!isAnnouncementReleased) {
     return <AnnouncementCountdown releaseAt={ANNOUNCEMENT_RELEASE_AT} />;
