@@ -1,22 +1,10 @@
 import { connection } from "next/server";
 
-import AnnouncementCountdown from "@/components/AnnouncementCountdown";
+import SiteShutdownCountdown from "@/components/SiteShutdownCountdown";
 
-const ANNOUNCEMENT_RELEASE_AT = new Date(
-  "2026-09-03T20:00:00-04:00"
+const SITE_SHUTDOWN_AT = new Date(
+  "2026-09-07T00:00:00-04:00"
 ).getTime();
-const NEON_GLYPHS = [
-  { letter: "N", x: 58, dash: "108 7 54 5 82 10", offset: 4 },
-  { letter: "O", x: 164, dash: "78 6 118 11 47 5", offset: 22 },
-  { letter: "C", x: 333, dash: "91 8 42 5 112 10", offset: 11 },
-  { letter: "H", x: 439, dash: "62 5 127 9 48 7", offset: 31 },
-  { letter: "A", x: 544, dash: "105 9 51 6 75 5", offset: 17 },
-  { letter: "M", x: 657, dash: "74 5 96 11 64 7", offset: 39 },
-  { letter: "P", x: 773, dash: "117 8 38 5 91 10", offset: 8 },
-  { letter: "I", x: 848, dash: "56 6 83 9 45 5", offset: 26 },
-  { letter: "O", x: 923, dash: "84 5 109 12 42 6", offset: 14 },
-  { letter: "N", x: 1024, dash: "42 24 31 20 48 28", offset: 17 },
-];
 const RHINO_COIN_LEADERS = [
   {
     rank: 1,
@@ -44,137 +32,20 @@ const RHINO_COIN_LEADERS = [
   },
 ] as const;
 
-function BrokenNeonTitle() {
-  return (
-    <svg
-      className="ominous-title mt-3 block w-full overflow-visible"
-      viewBox="0 0 1080 190"
-      role="img"
-      aria-label="No champion"
-    >
-      <path
-        aria-hidden="true"
-        className="neon-support-rail"
-        d="M 966 8 C 997 7 1033 9 1065 8"
-      />
-      <path
-        aria-hidden="true"
-        className="neon-support-rail-highlight"
-        d="M 969 5.6 C 998 4.8 1033 6.5 1062 5.7"
-      />
-
-      <circle
-        aria-hidden="true"
-        className="neon-cable-clamp neon-cable-clamp-broken"
-        cx="995"
-        cy="8"
-        r="2.8"
-      />
-      <circle
-        aria-hidden="true"
-        className="neon-cable-bolt"
-        cx="995"
-        cy="8"
-        r="0.8"
-      />
-
-      <g className="neon-snapped-cable" aria-hidden="true">
-        <circle className="neon-cable-clamp" cx="1053" cy="8" r="2.6" />
-        <circle className="neon-cable-bolt" cx="1053" cy="8" r="0.8" />
-        <path className="neon-cable-shadow" d="M 1053 11 C 1051 19 1056 27 1052 35" />
-        <path className="neon-letter-cable" d="M 1053 11 C 1051 19 1056 27 1052 35" />
-        <path className="neon-cable-highlight" d="M 1052.5 11 C 1050.5 19 1055.5 27 1051.5 35" />
-        <path className="neon-cable-fray" d="M 1052 35 l -2 5 M 1052 35 l 2 4 M 1052 35 l 0.5 5" />
-      </g>
-
-      <g className="neon-tube-unlit" aria-hidden="true">
-        {NEON_GLYPHS.slice(0, -1).map(({ letter, x }, index) => (
-          <text
-            key={`${letter}-${index}`}
-            x={x}
-            y="145"
-            textAnchor="middle"
-          >
-            {letter}
-          </text>
-        ))}
-      </g>
-
-      <g aria-hidden="true">
-        {NEON_GLYPHS.slice(0, -1).map(({ letter, x, dash, offset }, index) => (
-          <text
-            key={`${letter}-${index}`}
-            x={x}
-            y="145"
-            textAnchor="middle"
-            strokeDasharray={dash}
-            strokeDashoffset={offset}
-            className={`neon-tube-lit neon-letter-${index}`}
-          >
-            {letter}
-          </text>
-        ))}
-      </g>
-
-      <g className="neon-hanging-rig" aria-hidden="true">
-        <path
-          className="neon-hanging-wire-shadow"
-          d="M 995 11 C 997 24 992 42 995 58"
-        />
-        <path
-          className="neon-hanging-wire"
-          d="M 995 11 C 997 24 992 42 995 58"
-        />
-        <path
-          className="neon-hanging-wire-highlight"
-          d="M 994.45 11 C 996.45 24 991.45 42 994.45 58"
-        />
-        <circle className="neon-cable-sleeve neon-broken-sleeve" cx="995" cy="58" r="3" />
-        <g transform="rotate(10 995 58)">
-          <text
-            x="1024"
-            y="164"
-            textAnchor="middle"
-            className="neon-tube-unlit"
-          >
-            N
-          </text>
-          <text
-            x="1024"
-            y="164"
-            textAnchor="middle"
-            strokeDasharray={NEON_GLYPHS[9].dash}
-            strokeDashoffset={NEON_GLYPHS[9].offset}
-            className="neon-tube-lit neon-letter-9"
-          >
-            N
-          </text>
-        </g>
-      </g>
-    </svg>
-  );
-}
-
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ preview?: string | string[] }>;
-}) {
+export default async function HomePage() {
   await connection();
 
-  const { preview } = await searchParams;
-  const previewValue = Array.isArray(preview) ? preview[0] : preview;
-  const isLocalAnnouncementPreview =
-    process.env.NODE_ENV === "development" && previewValue === "announcement";
-
-  // This page is explicitly request-time rendered so wall-clock release logic is stable.
+  // This page is request-time rendered so the shutdown happens at the deadline.
   // eslint-disable-next-line react-hooks/purity
   const requestTime = Date.now();
-  const isAnnouncementReleased =
-    isLocalAnnouncementPreview || requestTime >= ANNOUNCEMENT_RELEASE_AT;
 
-  if (!isAnnouncementReleased) {
-    return <AnnouncementCountdown releaseAt={ANNOUNCEMENT_RELEASE_AT} />;
+  if (requestTime >= SITE_SHUTDOWN_AT) {
+    return (
+      <main
+        aria-label="The Rhino League website has closed"
+        className="min-h-screen bg-[#020101]"
+      />
+    );
   }
 
   return (
@@ -190,80 +61,44 @@ export default async function HomePage({
                 className="omen-pulse h-2.5 w-2.5 rounded-full bg-[#B1122B] shadow-[0_0_18px_rgba(177,18,43,0.95)]"
               />
               <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#C43A4E] sm:text-sm">
-                The Rhino League · Official ruling
+                The Rhino League · Final notice
               </p>
             </div>
 
-            <h1 className="mt-8 uppercase">
-              <span className="block text-sm font-semibold tracking-[0.25em] text-white/45 sm:text-base">
-                The 2026 season ends with
+            <h1 className="mt-8 font-serif text-5xl font-bold leading-[0.95] tracking-[-0.04em] text-white sm:text-7xl lg:text-8xl">
+              The website goes dark
+              <span className="mt-2 block text-[#D33A53] drop-shadow-[0_0_22px_rgba(177,18,43,0.38)]">
+                Monday.
               </span>
-              <BrokenNeonTitle />
             </h1>
             <p className="mt-7 font-mono text-xs uppercase tracking-[0.18em] text-white/30">
-              September 3, 2026 · Final determination
+              September 4, 2026 · One last weekend
             </p>
           </header>
 
-          <div className="space-y-7 py-9 text-base leading-8 text-white/68 sm:py-12 sm:text-lg">
-            <p className="font-serif text-xl text-white/90 sm:text-2xl">
-              Dear Rhino League community,
-            </p>
-
-            <p>
-              After reviewing the eligibility concerns raised following the
-              2026 final, we have decided to set aside the result of the match
-              and conclude the season without recognizing a champion.
-            </p>
-
-            <p>
-              The winning team&apos;s roster included multiple players who did
-              not comply with the league&apos;s eligibility requirements. One
-              player did not have the required Harvard affiliation, while
-              another had appeared in only one regular-season game and did not
-              meet the two-game minimum for playoff eligibility.
-            </p>
-
-            <p>
-              The affiliation concern had been raised directly before the
-              final, but the information provided at the time was inaccurate.
-              This denied the opposing team a fair opportunity to object or ask
-              that the player sit out.
-            </p>
-
-            <blockquote className="border-l-2 border-[#B1122B] bg-[#35040C]/25 py-3 pl-5 font-serif text-2xl leading-snug text-white/90 sm:pl-7 sm:text-3xl">
-              Taken together, these circumstances mean the final result cannot
-              fairly stand.
-            </blockquote>
-
-            <div className="verdict-panel border border-[#8E1024]/80 p-6 text-white/85 sm:p-8">
+          <div className="space-y-9 py-9 text-base leading-8 text-white/68 sm:py-12 sm:text-lg">
+            <section className="verdict-panel border border-[#8E1024]/80 p-6 text-white/85 sm:p-8">
               <p className="text-xs font-black uppercase tracking-[0.3em] text-[#E04A61]">
-                Final ruling
+                Final shutdown
               </p>
-              <p className="mt-4 font-serif text-xl leading-8 text-white sm:text-2xl">
-                No champion will be recognized for the 2026 season, and no 2026
-                plaque will be added to the Rhino Cup.
+              <h2 className="mt-4 font-serif text-3xl leading-tight text-white sm:text-4xl">
+                Monday, September 7 at 12:00 AM Eastern
+              </h2>
+              <p className="mt-4 text-white/60">
+                At the start of Monday, this website will be completely gone.
+                It will not remain online as an archive.
               </p>
-            </div>
+              <SiteShutdownCountdown shutdownAt={SITE_SHUTDOWN_AT} />
+            </section>
 
-            <p>
-              Going forward, the Harvard ID and playoff-eligibility rules will
-              be clearly publicized and consistently enforced. Team rosters
-              will be verified before the playoffs begin.
-            </p>
-
-            <p>
-              This decision does not diminish everything the wider Rhino
-              community brought to the summer. Thank you to every player,
-              organizer, and supporter who made the season possible. The league
-              has always depended on good faith, sportsmanship, and trust, and
-              those values will guide its return next summer.
-            </p>
-
-            <p className="border-l border-white/15 pl-5 text-white/55">
-              An official MCB announcement reflecting on the 2026 season and
-              the broader Rhino League community will follow separately.
-            </p>
+            <section className="border-l-2 border-[#B1122B] bg-[#35040C]/20 px-5 py-5 sm:px-7">
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-[#D44B61]">
+                MCB announcement
+              </p>
+              <p className="mt-3 font-serif text-xl text-white/90 sm:text-2xl">
+                An official MCB announcement will follow separately.
+              </p>
+            </section>
 
             <section
               id="rhino-coins"
@@ -320,14 +155,39 @@ export default async function HomePage({
               </div>
             </section>
 
-            <footer className="border-t border-red-950/60 pt-7">
-              <p className="font-serif text-xl font-semibold text-white">
-                Marc Duque
+            <section className="border-y border-red-950/70 bg-[#120306]/60 px-5 py-8 sm:px-8 sm:py-10">
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-[#D44B61]">
+                A final word from Marc
               </p>
-              <p className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-white/35">
-                Commissioner, The Rhino League
-              </p>
-            </footer>
+              <h2 className="mt-5 font-serif text-3xl leading-tight text-white sm:text-4xl">
+                Goodbye, and thank you.
+              </h2>
+              <div className="mt-6 space-y-5 text-white/65">
+                <p>
+                  The 2026 season was my final season as commissioner, and this
+                  is the last time I will be involved with the Rhino League.
+                </p>
+                <p>
+                  Thank you to everyone who played, organized, argued, cheered,
+                  and cared enough to make this strange summer tradition matter.
+                  Whatever happened on the court, the league was real because
+                  people kept showing up for it.
+                </p>
+                <p className="font-serif text-xl text-white/90 sm:text-2xl">
+                  It has been a privilege to be part of it. Goodbye, and thank
+                  you for everything.
+                </p>
+              </div>
+
+              <footer className="mt-8 border-t border-red-950/60 pt-6">
+                <p className="font-serif text-xl font-semibold text-white">
+                  Marc Duque
+                </p>
+                <p className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-white/35">
+                  Commissioner, The Rhino League · 2026
+                </p>
+              </footer>
+            </section>
           </div>
         </article>
 
