@@ -1,9 +1,7 @@
 import { connection } from "next/server";
 
 import AnnouncementCountdown from "@/components/AnnouncementCountdown";
-import CommentsSection from "@/components/CommentsSection";
 
-const ANNOUNCEMENT_COMMENT_ID = "20260000-0000-4000-8000-000000000001";
 const ANNOUNCEMENT_RELEASE_AT = new Date(
   "2026-09-03T20:00:00-04:00"
 ).getTime();
@@ -19,6 +17,32 @@ const NEON_GLYPHS = [
   { letter: "O", x: 923, dash: "84 5 109 12 42 6", offset: 14 },
   { letter: "N", x: 1024, dash: "42 24 31 20 48 28", offset: 17 },
 ];
+const RHINO_COIN_LEADERS = [
+  {
+    rank: 1,
+    name: "Tom Kazansky",
+    coins: 4730,
+    label: "Gold Rhino",
+    style:
+      "border-[#C4963E]/65 bg-[linear-gradient(145deg,rgba(196,150,62,0.22),rgba(34,15,5,0.76))] shadow-[#C4963E]/10",
+  },
+  {
+    rank: 2,
+    name: "Pete Mitchell",
+    coins: 3362,
+    label: "Silver Rhino",
+    style:
+      "border-white/20 bg-[linear-gradient(145deg,rgba(211,215,221,0.13),rgba(20,17,18,0.82))] shadow-white/5",
+  },
+  {
+    rank: 3,
+    name: "Nick Bradshaw",
+    coins: 3123,
+    label: "Bronze Rhino",
+    style:
+      "border-[#A96743]/45 bg-[linear-gradient(145deg,rgba(169,103,67,0.16),rgba(27,12,8,0.82))] shadow-[#A96743]/10",
+  },
+] as const;
 
 function BrokenNeonTitle() {
   return (
@@ -236,6 +260,66 @@ export default async function HomePage({
               those values will guide its return next summer.
             </p>
 
+            <p className="border-l border-white/15 pl-5 text-white/55">
+              An official MCB announcement reflecting on the 2026 season and
+              the broader Rhino League community will follow separately.
+            </p>
+
+            <section
+              id="rhino-coins"
+              className="scroll-mt-8 border border-[#C4963E]/35 bg-[#130B06]/75 p-5 shadow-2xl shadow-black/40 sm:p-8"
+            >
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-[#C4963E]">
+                One final accounting
+              </p>
+              <h2 className="mt-4 font-serif text-3xl leading-tight text-white sm:text-4xl">
+                About those Rhino Coins…
+              </h2>
+              <p className="mt-4 text-white/60">
+                Some of you have been asking what happens to the Rhino Coins.
+                First, congratulations to the top three finishers.
+              </p>
+
+              <ol className="mt-7 grid gap-3 sm:grid-cols-3 sm:items-end">
+                {RHINO_COIN_LEADERS.map((leader) => (
+                  <li
+                    key={leader.rank}
+                    className={`border p-5 shadow-xl ${leader.style} ${
+                      leader.rank === 1 ? "sm:-translate-y-3" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="font-serif text-4xl font-bold leading-none text-white/85">
+                        {leader.rank}
+                      </span>
+                      <span className="text-right font-mono text-[0.6rem] uppercase tracking-[0.16em] text-white/35">
+                        {leader.label}
+                      </span>
+                    </div>
+                    <p className="mt-7 font-serif text-xl font-semibold leading-tight text-white">
+                      {leader.name}
+                    </p>
+                    <p className="mt-3 font-mono text-2xl font-bold tabular-nums text-[#E6C270]">
+                      {leader.coins.toLocaleString("en-US")}
+                    </p>
+                    <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/35">
+                      Rhino Coins
+                    </p>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="mt-5 border-t border-[#C4963E]/20 pt-5 text-center sm:mt-3">
+                <p className="font-serif text-xl leading-8 text-white/85 sm:text-2xl">
+                  We hope they had fun earning them, because that fun is all
+                  they will get in exchange.
+                </p>
+                <p className="mt-3 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-white/30">
+                  No cash value · No prizes · No redemption · Just glory
+                </p>
+              </div>
+            </section>
+
             <footer className="border-t border-red-950/60 pt-7">
               <p className="font-serif text-xl font-semibold text-white">
                 Marc Duque
@@ -247,13 +331,12 @@ export default async function HomePage({
           </div>
         </article>
 
-        <section className="shelved-comments pb-12 pt-7 sm:pb-20 sm:pt-9">
-          <CommentsSection
-            targetType="game"
-            targetId={ANNOUNCEMENT_COMMENT_ID}
-            title="Community comments"
-            defaultOpen
-          />
+        <section className="pb-12 pt-7 sm:pb-20 sm:pt-9">
+          <div className="border border-red-950/60 bg-black/65 px-5 py-6 text-center shadow-2xl shadow-black sm:px-8">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-white/40 sm:text-sm">
+              Comments on this post have been restricted.
+            </p>
+          </div>
         </section>
       </div>
     </main>
